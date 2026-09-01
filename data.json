@@ -1,0 +1,44 @@
+{
+  "period": "2026-08-01 ~ 2026-08-31 (vs 7월)",
+  "updated": "2026-09-01",
+  "contacts": {"managers": "최연아 · 안희성", "phone": "02-3775-9290 · 02-3775-9277", "email": "yachoi@linkprice.com · hsan@linkprice.com"},
+  "channels": {
+    "meta_partner": {
+      "name": "META 협력광고",
+      "jul": {"impr": 2550971, "clicks": 17041, "cost": 8516948, "purchase": 73, "revenue": 3280650, "roas": 39},
+      "aug": {"impr": 469900, "clicks": 4562, "cost": 3223537, "purchase": 61, "revenue": 3920500, "roas": 122},
+      "wow": {"impr": -81.58, "clicks": -73.23, "cost": -62.15, "purchase": -16.44, "revenue": 19.50, "roas": 215.74}
+    },
+    "meta_external": {
+      "name": "META 외부링크",
+      "jul": {"impr": 362333, "clicks": 13180, "cost": 2118097, "purchase": 1, "revenue": 238000, "roas": 11},
+      "aug": {"impr": 803297, "clicks": 29665, "cost": 6658610, "purchase": 1, "revenue": 65100, "roas": 1},
+      "wow": {"impr": 121.70, "clicks": 125.08, "cost": 214.37, "purchase": 0.0, "revenue": -72.65, "roas": -91.30}
+    },
+    "google": {
+      "name": "구글",
+      "jul": {"impr": 1761505, "clicks": 109591, "cost": 3543981, "purchase": 4, "revenue": 103400, "roas": 3},
+      "aug": {"impr": 1529057, "clicks": 58532, "cost": 3160536, "purchase": 5, "revenue": 280507, "roas": 9},
+      "wow": {"impr": -13.20, "clicks": -46.59, "cost": -10.82, "purchase": 25.00, "revenue": 171.28, "roas": 204.20}
+    },
+    "naver_sa": {
+      "name": "네이버 SA",
+      "jul": {"impr": 6555072, "clicks": 48908, "cost": 122991073, "purchase": 2696, "revenue": 139207460, "roas": 113.19},
+      "aug": {"impr": 5953979, "clicks": 58116, "cost": 101087049, "purchase": 2076, "revenue": 125936110, "roas": 124.58},
+      "wow": {"impr": -9.17, "clicks": 18.83, "cost": -17.81, "purchase": -23.00, "revenue": -9.53, "roas": 10.07}
+    },
+    "naver_gfa": {
+      "name": "네이버 GFA",
+      "jul": {"impr": 1130929, "clicks": 5838, "cost": 3294989, "purchase": 180, "revenue": 9385000, "roas": 284.83},
+      "aug": {"impr": 540147, "clicks": 5704, "cost": 2004306, "purchase": 107, "revenue": 6450060, "roas": 321.81},
+      "wow": {"impr": -52.24, "clicks": -2.30, "cost": -39.17, "purchase": -40.56, "revenue": -31.27, "roas": 12.98}
+    },
+    "adboost": {
+      "name": "애드부스트",
+      "jul": {"impr": null, "clicks": null, "cost": null, "purchase": null, "revenue": null, "roas": null},
+      "aug": {"impr": null, "clicks": null, "cost": null, "purchase": null, "revenue": null, "roas": null},
+      "wow": {"impr": null, "clicks": null, "cost": null, "purchase": null, "revenue": null, "roas": null},
+      "note": "8월 광고비 +35.88%, 클릭 +65.61%, 구매 +73.81%, 구매완료매출 +101.33% (전월비)"
+    }
+  }
+}
