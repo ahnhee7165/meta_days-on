@@ -187,7 +187,13 @@ const CREATIVES_791581078215593 = [
   {name:"쿠폰부터 본품 증정까지🎁 데이즈온 리뉴얼 이벤트", img:"https://scontent-sea1-1.xx.fbcdn.net/v/t45.1600-4/792148766_122124173703273739_4405113690914959767_n.jpg?_nc_cat=104&ccb=1-7&_nc_sid=d5bd00&_nc_ohc=c-qBTWlYgTAQ7kNvwGKmrlW&_nc_oc=Adp5izmfLxV7Ak7jmLjewPcORzo60QHOOnL8N7k1uP5yov1SRFM4-uovHYWVNodwbJw&_nc_zt=1&_nc_ht=scontent-sea1-1.xx&edm=AEZPnVgEAAAA&_nc_gid=RborEOlLUztjpP3gB8swUA&_nc_tpa=Q5bMBQJagi9UfIZoGICSpg_IyWIZ53Z8-lCezEX_kci5lxEwJNIr7Ag18IQSMfgAFojmEcS-FB1EPJtcHw&oh=00_AQLkApB3BbZV_nFYTr91mBx1Ys9hGJm6WLOH9uluwOPOvg&oe=6A9C8CB7"},
 ];
 
-let currentPeriod = "aug";
+const EXTERNAL_TOP5_CTR = [
+  {name:"0803-0805_Malaysia Live_alpha CD_video_alpha CD-중국어-2", impr:6325, clicks:374, cost:15157, ctr:"5.91%"},
+  {name:"0807-0809_Successful Sisters_paradisegrain_image_paradisegrain-1", impr:3089, clicks:172, cost:59252, ctr:"5.57%"},
+  {name:"0807-0809_Successful Sisters_paradisegrain_image_paradisegrain-6", impr:349, clicks:18, cost:5659, ctr:"5.16%"},
+  {name:"260710_영상2_중국어", impr:13695, clicks:695, cost:43202, ctr:"5.07%"},
+  {name:"260703_영상2_영어", impr:47344, clicks:2275, cost:168368, ctr:"4.81%"},
+];
 function isWeekPeriod(){ return currentPeriod.startsWith('w'); }
 function fmt(n){ if(n===null||n===undefined) return "-"; if(typeof n==="string") return n; return Math.round(n).toLocaleString('ko-KR'); }
 function pct(n, digits=1){ if(n===null||n===undefined) return "-"; return (n>0?"+":"") + n.toFixed(digits) + "%"; }
@@ -368,6 +374,14 @@ function top5HTML(){
     <p class="desc">Meta Ads MCP로 실시간 조회한 실제 소재 · 협력광고는 파트너 페이지 공동 노출 기반으로, 아래 소재들의 "구매" 실적은 <b>공유 항목이 포함된 구매(Shared Purchase)</b> 기준으로 집계됩니다.</p>
     <div class="top5-grid">${creativeCards(CREATIVES_841547815503451)}</div>
     <div class="note">📌 공유 구매란: 파트너(예: 올리브영 등)와 공동 노출되는 협력광고 특성상, 전환 기여가 데이즈온과 파트너 페이지 사이에 공유되는 구조입니다. 이 계정의 구매·매출 지표는 이 "공유 귀속" 기준값입니다.</div>
+  </div>
+  <div class="panel">
+    <h2>META 외부링크 · 소재 성과 TOP5 (클릭률 CTR 기준)</h2>
+    <p class="desc">외부링크 계정은 구매 전환이 거의 없어(전월 대비 매출 -72.65%), 매출 대신 <b>클릭률(CTR)</b> 기준으로 상위 소재를 뽑았습니다.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>순위</th><th>소재명</th><th>노출</th><th>클릭</th><th>지출금액</th><th>CTR</th></tr></thead>
+      <tbody>${EXTERNAL_TOP5_CTR.map((c,i)=>`<tr><td>${i+1}</td><td>${c.name}</td><td class="num">${fmt(c.impr)}</td><td class="num">${fmt(c.clicks)}</td><td class="num">${fmt(c.cost)}원</td><td class="num" style="font-weight:700;color:var(--accent)">${c.ctr}</td></tr>`).join('')}</tbody>
+    </table></div>
   </div>
   <div class="panel">
     <h2>META 외부링크 계정 소재 <span class="acct-badge a2">791581078215593</span></h2>
