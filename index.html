@@ -48,7 +48,7 @@
   section.tab{display:none;} section.tab.active{display:block;}
   .chart-wrap{margin-top:4px;}
   .bar-row{display:flex; align-items:center; gap:10px; margin-bottom:9px;}
-  .bar-row .bl{width:96px; font-size:11.5px; color:var(--muted); flex-shrink:0; text-align:right;}
+  .bar-row .bl{width:118px; font-size:11.5px; color:var(--muted); flex-shrink:0; text-align:right;}
   .bar-row .bt{flex:1; background:var(--bg); border-radius:6px; height:20px; position:relative; overflow:hidden;}
   .bar-row .bf{height:100%; border-radius:6px; background:linear-gradient(90deg,var(--accent),var(--accent2)); display:flex; align-items:center;}
   .bar-row .bv{width:110px; font-size:11.5px; font-weight:700; flex-shrink:0;}
@@ -93,12 +93,12 @@
       <select id="periodSelect" onchange="onPeriodChange()">
         <option value="jul">7월</option>
         <option value="aug" selected>8월</option>
-        <option value="w1">8월 1주차</option>
-        <option value="w2">8월 2주차</option>
-        <option value="w3">8월 3주차</option>
-        <option value="w4">8월 4주차</option>
-        <option value="w5">8월 5주차</option>
-        <option value="w6">8월 6주차</option>
+        <option value="w1">8월 1주차 (8/1~8/2)</option>
+        <option value="w2">8월 2주차 (8/3~8/9)</option>
+        <option value="w3">8월 3주차 (8/10~8/16)</option>
+        <option value="w4">8월 4주차 (8/17~8/23)</option>
+        <option value="w5">8월 5주차 (8/24~8/30)</option>
+        <option value="w6">8월 6주차 (8/31)</option>
       </select>
     </div>
   </div>
@@ -300,7 +300,8 @@ function channelTableHTML(key){
     }).join('');
     barRows = c.cols.map((label,i)=> i<5 ? {label, v:wdata[i]||0} : null).filter(Boolean);
   }
-  const weekTrendRows = ["w1","w2","w3","w4","w5","w6"].map((wk,i)=>({label:"8월"+(i+1)+"주", v: c.weeks && c.weeks[wk] ? (c.weeks[wk][2]||0) : 0}));
+  const WEEK_LABELS = ["1주(8/1~2)","2주(8/3~9)","3주(8/10~16)","4주(8/17~23)","5주(8/24~30)","6주(8/31)"];
+  const weekTrendRows = ["w1","w2","w3","w4","w5","w6"].map((wk,i)=>({label:WEEK_LABELS[i], v: c.weeks && c.weeks[wk] ? (c.weeks[wk][2]||0) : 0}));
   const campaignHtml = campaignSection(key);
   return `<div class="panel">
     <h2>${c.name} · ${periodLabel()}</h2>
