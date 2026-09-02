@@ -91,7 +91,8 @@
     <div class="periodbox">
       <label>기간</label>
       <select id="periodSelect" onchange="onPeriodChange()">
-        <option value="month">월별 (7월 vs 8월)</option>
+        <option value="jul">7월</option>
+        <option value="aug" selected>8월</option>
         <option value="w1">8월 1주차</option>
         <option value="w2">8월 2주차</option>
         <option value="w3">8월 3주차</option>
@@ -186,13 +187,16 @@ const CREATIVES_791581078215593 = [
   {name:"쿠폰부터 본품 증정까지🎁 데이즈온 리뉴얼 이벤트", img:"https://scontent-sea1-1.xx.fbcdn.net/v/t45.1600-4/792148766_122124173703273739_4405113690914959767_n.jpg?_nc_cat=104&ccb=1-7&_nc_sid=d5bd00&_nc_ohc=c-qBTWlYgTAQ7kNvwGKmrlW&_nc_oc=Adp5izmfLxV7Ak7jmLjewPcORzo60QHOOnL8N7k1uP5yov1SRFM4-uovHYWVNodwbJw&_nc_zt=1&_nc_ht=scontent-sea1-1.xx&edm=AEZPnVgEAAAA&_nc_gid=RborEOlLUztjpP3gB8swUA&_nc_tpa=Q5bMBQJagi9UfIZoGICSpg_IyWIZ53Z8-lCezEX_kci5lxEwJNIr7Ag18IQSMfgAFojmEcS-FB1EPJtcHw&oh=00_AQLkApB3BbZV_nFYTr91mBx1Ys9hGJm6WLOH9uluwOPOvg&oe=6A9C8CB7"},
 ];
 
-let currentPeriod = "month";
+let currentPeriod = "aug";
+function isWeekPeriod(){ return currentPeriod.startsWith('w'); }
 function fmt(n){ if(n===null||n===undefined) return "-"; if(typeof n==="string") return n; return Math.round(n).toLocaleString('ko-KR'); }
 function pct(n, digits=1){ if(n===null||n===undefined) return "-"; return (n>0?"+":"") + n.toFixed(digits) + "%"; }
 function deltaClass(n){ if(n===null||n===undefined) return "flat"; return n>0?"up":(n<0?"down":"flat"); }
 function periodLabel(){ return document.getElementById('periodSelect').selectedOptions[0].text; }
 function getValue(c, idx){
-  if(currentPeriod === "month") return c.month ? c.month.aug[idx] : null;
+  if(!c.month) return null;
+  if(currentPeriod === "jul") return c.month.jul[idx];
+  if(currentPeriod === "aug") return c.month.aug[idx];
   return (c.weeks && c.weeks[currentPeriod]) ? c.weeks[currentPeriod][idx] : null;
 }
 
@@ -233,7 +237,7 @@ function lineChart(data, w=760, h=220){
 
 // simple donut for channel cost share (CSS conic-gradient)
 function donutChart(){
-  const items = Object.values(CH).filter(c=>c.month).map(c=>({name:c.name, v:c.month.aug[2]}));
+  const items = Object.values(CH).filter(c=>c.month).map(c=>({name:c.name, v:getValue(c,2)||0}));
   const total = items.reduce((s,i)=>s+i.v,0);
   const colors = ["#4f46e5","#06b6d4","#f59e0b","#10b981","#ec4899"];
   let acc = 0;
@@ -249,10 +253,8 @@ function donutChart(){
 }
 
 function overviewHTML(){
-  let totalCostJul=0, totalCostAug=0, totalRevJul=0, totalRevAug=0;
-  Object.values(CH).forEach(c=>{ if(c.month){ totalCostJul+=c.month.jul[2]; totalRevJul+=c.month.jul[4]; totalCostAug+=c.month.aug[2]; totalRevAug+=c.month.aug[4]; } });
-  const costDelta = ((totalCostAug-totalCostJul)/totalCostJul*100);
-  const revDelta = ((totalRevAug-totalRevJul)/totalRevJul*100);
+  let totalCost=0, totalRev=0;
+  Object.values(CH).forEach(c=>{ if(c.month){ totalCost += (getValue(c,2)||0); totalRev += (getValue(c,4)||0); } });
   const costRows = Object.values(CH).filter(c=>c.month).map(c=>({label:c.name, v:getValue(c,2)||0}));
   const roasRows = Object.values(CH).filter(c=>c.month).map(c=>({label:c.name, v:getValue(c,5)||0}));
   let cards = Object.entries(CH).map(([key,c])=>{
@@ -264,16 +266,16 @@ function overviewHTML(){
     </div>`;
   }).join('');
   return `
-  <div class="panel"><h2>전체 채널 통합 요약 (월별 기준) · 8월 vs 7월</h2>
+  <div class="panel"><h2>전체 채널 통합 요약 · ${periodLabel()}</h2>
     <p class="desc">메타(협력광고·외부링크) · 구글 · 네이버(SA·GFA) 합산 (애드부스트 별도)</p>
     <div class="grid2">
-      <div class="card"><div class="label">총 광고비</div><div class="value">${fmt(totalCostAug)}원</div><div class="delta ${deltaClass(costDelta)}">${pct(costDelta)} (전월비)</div></div>
-      <div class="card"><div class="label">총 구매전환매출</div><div class="value">${fmt(totalRevAug)}원</div><div class="delta ${deltaClass(revDelta)}">${pct(revDelta)} (전월비)</div></div>
+      <div class="card"><div class="label">총 광고비</div><div class="value">${fmt(totalCost)}원</div></div>
+      <div class="card"><div class="label">총 구매전환매출</div><div class="value">${fmt(totalRev)}원</div></div>
     </div>
   </div>
   <div class="grid3">
     <div class="panel"><h2>채널별 광고비 비교 · ${periodLabel()}</h2>${barChart(costRows,"원")}</div>
-    <div class="panel"><h2>8월 광고비 채널 비중</h2>${donutChart()}</div>
+    <div class="panel"><h2>${periodLabel()} 광고비 채널 비중</h2>${donutChart()}</div>
   </div>
   <div class="panel"><h2>채널별 ROAS 비교 · ${periodLabel()}</h2>${barChart(roasRows,"%")}</div>
   <div class="panel"><h2>채널별 성과 한눈에 보기</h2><p class="desc">카드를 클릭하면 왼쪽 매체 메뉴로 이동합니다.</p><div class="grid2">${cards}</div></div>`;
@@ -286,40 +288,30 @@ function channelTableHTML(key){
       <p class="desc">8월 4주차부터 상품·캠페인 세분화 운영을 시작하여 월별/주차별 비교표는 별도 산출되지 않았습니다.</p>
       <div class="note">${c.note}</div></div>` + dailySection(key);
   }
-  const isWeek = currentPeriod !== "month";
+  const wdata = isWeekPeriod() ? (c.weeks ? c.weeks[currentPeriod] : null) : (currentPeriod==="jul" ? c.month.jul : c.month.aug);
   let rowsHtml, barRows;
-  if(!isWeek){
-    rowsHtml = c.cols.map((label,i)=>{
-      const jul=c.month.jul[i], aug=c.month.aug[i], wow=c.month.wow[i];
-      const isPct = i===5;
-      return `<tr><td>${label}</td><td class="num">${isPct?jul+'%':fmt(jul)}</td><td class="num">${isPct?aug+'%':fmt(aug)}</td><td class="delta ${isPct?'':deltaClass(wow)}">${isPct?'-':pct(wow,2)}</td></tr>`;
-    }).join('');
-    barRows = c.cols.map((label,i)=> i<5 ? {label, v:c.month.aug[i]} : null).filter(Boolean);
+  if(!wdata){
+    rowsHtml = `<tr><td colspan="2" style="color:var(--muted)">해당 기간 데이터가 부족하거나 집계되지 않았습니다.</td></tr>`;
+    barRows = [];
   } else {
-    const wdata = c.weeks ? c.weeks[currentPeriod] : null;
-    if(!wdata){
-      rowsHtml = `<tr><td colspan="4" style="color:var(--muted)">해당 주차 데이터가 부족하거나 집계되지 않았습니다.</td></tr>`;
-      barRows = [];
-    } else {
-      rowsHtml = c.cols.map((label,i)=>{
-        const isPct = i===5;
-        return `<tr><td>${label}</td><td class="num" colspan="3" style="text-align:right">${isPct? (wdata[i]!==null?wdata[i]+'%':'-') : fmt(wdata[i])}</td></tr>`;
-      }).join('');
-      barRows = c.cols.map((label,i)=> i<5 ? {label, v:wdata[i]||0} : null).filter(Boolean);
-    }
+    rowsHtml = c.cols.map((label,i)=>{
+      const isPct = i===5;
+      return `<tr><td>${label}</td><td class="num">${isPct? (wdata[i]!==null?wdata[i]+'%':'-') : fmt(wdata[i])}</td></tr>`;
+    }).join('');
+    barRows = c.cols.map((label,i)=> i<5 ? {label, v:wdata[i]||0} : null).filter(Boolean);
   }
   const weekTrendRows = ["w1","w2","w3","w4","w5","w6"].map((wk,i)=>({label:"8월"+(i+1)+"주", v: c.weeks && c.weeks[wk] ? (c.weeks[wk][2]||0) : 0}));
   const campaignHtml = campaignSection(key);
   return `<div class="panel">
-    <h2>${c.name} · ${isWeek ? periodLabel() : '월별 비교 (7월 vs 8월)'}</h2>
-    <p class="desc">${isWeek ? '선택한 주차 실적' : '7월 대비 8월 성과 (구매전환 기준)'}</p>
+    <h2>${c.name} · ${periodLabel()}</h2>
+    <p class="desc">선택한 기간의 실적입니다. 상단 드롭다운에서 7월 / 8월 / 8월 주차별로 바꿀 수 있어요.</p>
     <div class="table-wrap"><table>
-      <thead><tr><th>지표</th><th>${isWeek?periodLabel():'7월'}</th>${isWeek?'':'<th>8월</th><th>증감(WOW)</th>'}</tr></thead>
+      <thead><tr><th>지표</th><th>${periodLabel()}</th></tr></thead>
       <tbody>${rowsHtml}</tbody>
     </table></div>
   </div>
   <div class="grid3">
-    <div class="panel"><h2>${c.name} · 지표 비교 (${isWeek?periodLabel():'8월'})</h2>${barRows.length ? barChart(barRows,"") : '<p class="desc">표시할 데이터가 없습니다.</p>'}</div>
+    <div class="panel"><h2>${c.name} · 지표 비교 (${periodLabel()})</h2>${barRows.length ? barChart(barRows,"") : '<p class="desc">표시할 데이터가 없습니다.</p>'}</div>
     <div class="panel"><h2>8월 주차별 광고비 추이</h2>${barChart(weekTrendRows,"원")}</div>
   </div>
   ${dailySection(key)}
