@@ -5,207 +5,182 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>DAYS ON 통합 광고 성과 대시보드</title>
 <style>
-  :root{
-    --bg:#f5f6fa; --panel:#ffffff; --text:#171923; --muted:#6b7280;
-    --border:#e5e7eb; --accent:#4f46e5; --accent2:#06b6d4; --up:#dc2626; --down:#2563eb;
-    --sidebar-w:216px; --shadow:0 1px 3px rgba(0,0,0,.05), 0 6px 18px rgba(0,0,0,.04);
-  }
-  *{box-sizing:border-box;}
-  body{margin:0; font-family:-apple-system,BlinkMacSystemFont,"Pretendard","Apple SD Gothic Neo","Segoe UI",sans-serif; background:var(--bg); color:var(--text); display:flex; min-height:100vh;}
-  aside{width:var(--sidebar-w); flex-shrink:0; background:var(--panel); border-right:1px solid var(--border); padding:22px 0; position:sticky; top:0; height:100vh; overflow-y:auto;}
-  .logo{padding:0 20px 16px; border-bottom:1px solid var(--border); margin-bottom:10px;}
-  .logo .brand{font-weight:800; font-size:17px;}
-  .logo .period{font-size:11px; color:var(--muted); margin-top:4px;}
-  nav .group-label{font-size:10.5px; color:var(--muted); font-weight:700; padding:14px 20px 6px; text-transform:uppercase; letter-spacing:.04em;}
-  nav button{display:flex; align-items:center; gap:9px; width:100%; text-align:left; border:none; background:none; padding:10px 20px; font-size:13.5px; cursor:pointer; color:var(--text); border-left:3px solid transparent;}
-  nav button:hover{background:var(--bg);}
-  nav button.active{background:#eef0ff; border-left-color:var(--accent); color:var(--accent); font-weight:700;}
-  nav button .dot{width:7px; height:7px; border-radius:50%; background:var(--border); flex-shrink:0;}
-  nav button.active .dot{background:var(--accent);}
-  main{flex:1; min-width:0; padding:24px 30px 60px;}
-  .topbar{display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; gap:12px; flex-wrap:wrap;}
-  h1{font-size:21px; margin:0 0 3px;}
-  .sub{color:var(--muted); font-size:12.5px; margin:0;}
-  .periodbox{display:flex; align-items:center; gap:8px; background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:6px 10px; box-shadow:var(--shadow);}
-  .periodbox label{font-size:12px; color:var(--muted); font-weight:600;}
-  .periodbox select{border:none; background:transparent; font-size:13px; font-weight:600; color:var(--accent); cursor:pointer; padding:4px 2px;}
-  .panel{background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:20px 22px; margin-bottom:16px; box-shadow:var(--shadow);}
-  .panel h2{margin:0 0 3px; font-size:16px;}
-  .panel .desc{color:var(--muted); font-size:12px; margin:0 0 14px;}
-  .grid2{display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px;}
-  .grid3{display:grid; grid-template-columns:2fr 1fr; gap:16px;}
-  @media(max-width:900px){.grid3{grid-template-columns:1fr;}}
-  .card{background:var(--bg); border:1px solid var(--border); border-radius:12px; padding:14px 16px;}
-  .card .label{font-size:11.5px; color:var(--muted); margin-bottom:6px;}
-  .card .value{font-size:19px; font-weight:700;}
-  .card .delta{font-size:11.5px; margin-top:5px; font-weight:600;}
-  .delta.up{color:var(--up);} .delta.down{color:var(--down);} .delta.flat{color:var(--muted);}
-  table{width:100%; border-collapse:collapse; font-size:12.5px;}
-  th,td{padding:8px 8px; text-align:right; border-bottom:1px solid var(--border); white-space:nowrap;}
-  th:first-child,td:first-child{text-align:left;}
-  th{color:var(--muted); font-weight:600; font-size:11px;}
-  .table-wrap{overflow-x:auto;}
-  section.tab{display:none;} section.tab.active{display:block;}
-  .chart-wrap{margin-top:4px;}
-  .bar-row{display:flex; align-items:center; gap:10px; margin-bottom:9px;}
-  .bar-row .bl{width:118px; font-size:11.5px; color:var(--muted); flex-shrink:0; text-align:right;}
-  .bar-row .bt{flex:1; background:var(--bg); border-radius:6px; height:20px; position:relative; overflow:hidden;}
-  .bar-row .bf{height:100%; border-radius:6px; background:linear-gradient(90deg,var(--accent),var(--accent2)); display:flex; align-items:center;}
-  .bar-row .bv{width:110px; font-size:11.5px; font-weight:700; flex-shrink:0;}
-  .top5-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:12px; margin-top:6px;}
-  .creative-card{border:1px solid var(--border); border-radius:12px; overflow:hidden; background:var(--bg); position:relative;}
-  .creative-card .rank{position:absolute; top:7px; left:7px; background:var(--accent); color:#fff; font-size:10.5px; font-weight:800; padding:2px 7px; border-radius:20px; z-index:2;}
-  .creative-card img{width:100%; height:160px; object-fit:cover; display:block; background:#ddd;}
-  .creative-card .noimg{width:100%; height:160px; display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:11px; background:repeating-linear-gradient(45deg,#eee,#eee 8px,#f6f6f6 8px,#f6f6f6 16px);}
-  .creative-card .info{padding:9px 11px;}
-  .creative-card .cname{font-size:11px; font-weight:600; line-height:1.4; max-height:3.9em; overflow:hidden;}
-  .acct-badge{display:inline-block; font-size:10px; padding:2px 8px; border-radius:10px; margin-left:6px; font-weight:700;}
-  .acct-badge.a1{background:#e0e7ff; color:#4338ca;}
-  .acct-badge.a2{background:#fce7f3; color:#be185d;}
-  .note{font-size:11.5px; color:var(--muted); margin-top:10px; line-height:1.7; background:var(--bg); border:1px dashed var(--border); border-radius:8px; padding:10px 12px;}
-  footer{color:var(--muted); font-size:11px; padding-top:10px; border-top:1px solid var(--border); margin-top:6px;}
-  .legend{display:flex; gap:14px; font-size:11.5px; margin-bottom:6px;}
-  .legend span{display:flex; align-items:center; gap:5px;}
-  .legend i{width:10px; height:10px; border-radius:2px; display:inline-block;}
-  .donut-wrap{display:flex; align-items:center; gap:16px; flex-wrap:wrap;}
-  .donut-legend{font-size:11.5px; flex:1; min-width:150px;}
-  .donut-legend .row{display:flex; align-items:center; gap:7px; margin-bottom:7px;}
-  .donut-legend i{width:10px; height:10px; border-radius:3px; flex-shrink:0;}
-  .rankbadge{display:inline-flex; align-items:center; justify-content:center; width:20px; height:20px; border-radius:50%; background:var(--accent); color:#fff; font-size:10.5px; font-weight:800; margin-right:6px;}
+:root{
+  --bg:#f5f6fa; --panel:#ffffff; --text:#171923; --muted:#6b7280;
+  --border:#e5e7eb; --accent:#4f46e5; --accent2:#06b6d4; --up:#dc2626; --down:#2563eb;
+  --sidebar-w:216px; --shadow:0 1px 3px rgba(0,0,0,.05), 0 6px 18px rgba(0,0,0,.04);
+}
+*{box-sizing:border-box;}
+body{margin:0; font-family:-apple-system,BlinkMacSystemFont,"Pretendard","Apple SD Gothic Neo","Segoe UI",sans-serif; background:var(--bg); color:var(--text); display:flex; min-height:100vh;}
+aside{width:var(--sidebar-w); flex-shrink:0; background:var(--panel); border-right:1px solid var(--border); padding:22px 0; position:sticky; top:0; height:100vh; overflow-y:auto;}
+.logo{padding:0 20px 16px; border-bottom:1px solid var(--border); margin-bottom:10px;}
+.logo .brand{font-weight:800; font-size:17px;}
+.logo .period{font-size:11px; color:var(--muted); margin-top:4px;}
+nav .group-label{font-size:10.5px; color:var(--muted); font-weight:700; padding:14px 20px 6px; text-transform:uppercase; letter-spacing:.04em;}
+nav button{display:flex; align-items:center; gap:9px; width:100%; text-align:left; border:none; background:none; padding:10px 20px; font-size:13.5px; cursor:pointer; color:var(--text); border-left:3px solid transparent;}
+nav button:hover{background:var(--bg);}
+nav button.active{background:#eef0ff; border-left-color:var(--accent); color:var(--accent); font-weight:700;}
+nav button .dot{width:7px; height:7px; border-radius:50%; background:var(--border); flex-shrink:0;}
+nav button.active .dot{background:var(--accent);}
+main{flex:1; min-width:0; padding:24px 30px 60px;}
+.topbar{display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; gap:12px; flex-wrap:wrap;}
+h1{font-size:21px; margin:0 0 3px;}
+.sub{color:var(--muted); font-size:12.5px; margin:0;}
+.periodbox{display:flex; align-items:center; gap:8px; background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:6px 10px; box-shadow:var(--shadow); flex-wrap:wrap;}
+.periodbox label{font-size:12px; color:var(--muted); font-weight:600;}
+.periodbox select{border:none; background:transparent; font-size:13px; font-weight:600; color:var(--accent); cursor:pointer; padding:4px 2px;}
+.panel{background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:20px 22px; margin-bottom:16px; box-shadow:var(--shadow);}
+.panel h2{margin:0 0 3px; font-size:16px;}
+.panel .desc{color:var(--muted); font-size:12px; margin:0 0 14px;}
+.grid2{display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px;}
+.grid3{display:grid; grid-template-columns:2fr 1fr; gap:16px;}
+@media(max-width:900px){.grid3{grid-template-columns:1fr;}}
+.card{background:var(--bg); border:1px solid var(--border); border-radius:12px; padding:14px 16px;}
+.card .label{font-size:11.5px; color:var(--muted); margin-bottom:6px;}
+.card .value{font-size:19px; font-weight:700;}
+.card .delta{font-size:11.5px; margin-top:5px; font-weight:600; color:var(--muted);}
+table{width:100%; border-collapse:collapse; font-size:12.5px;}
+th,td{padding:8px 8px; text-align:right; border-bottom:1px solid var(--border); white-space:nowrap;}
+th:first-child,td:first-child{text-align:left;}
+th{color:var(--muted); font-weight:600; font-size:11px;}
+.table-wrap{overflow-x:auto;}
+section.tab{display:none;} section.tab.active{display:block;}
+.chart-wrap{margin-top:4px;}
+.bar-row{display:flex; align-items:center; gap:10px; margin-bottom:9px;}
+.bar-row .bl{width:150px; font-size:11.5px; color:var(--muted); flex-shrink:0; text-align:right;}
+.bar-row .bt{flex:1; background:var(--bg); border-radius:6px; height:20px; position:relative; overflow:hidden;}
+.bar-row .bf{height:100%; border-radius:6px; background:linear-gradient(90deg,var(--accent),var(--accent2)); display:flex; align-items:center;}
+.bar-row .bv{width:120px; font-size:11.5px; font-weight:700; flex-shrink:0;}
+.note{font-size:11.5px; color:var(--muted); margin-top:10px; line-height:1.7; background:var(--bg); border:1px dashed var(--border); border-radius:8px; padding:10px 12px;}
+footer{color:var(--muted); font-size:11px; padding-top:10px; border-top:1px solid var(--border); margin-top:6px;}
+.legend{display:flex; gap:14px; font-size:11.5px; margin-bottom:6px;}
+.legend span{display:flex; align-items:center; gap:5px;}
+.legend i{width:10px; height:10px; border-radius:2px; display:inline-block;}
+.donut-wrap{display:flex; align-items:center; gap:16px; flex-wrap:wrap;}
+.donut-legend{font-size:11.5px; flex:1; min-width:150px;}
+.donut-legend .row{display:flex; align-items:center; gap:7px; margin-bottom:7px;}
+.donut-legend i{width:10px; height:10px; border-radius:3px; flex-shrink:0;}
+.rankbadge{display:inline-flex; align-items:center; justify-content:center; width:20px; height:20px; border-radius:50%; background:var(--accent); color:#fff; font-size:10.5px; font-weight:800; margin-right:6px;}
+.acct-badge{display:inline-block; font-size:10px; padding:2px 8px; border-radius:10px; margin-left:6px; font-weight:700; background:#e0e7ff; color:#4338ca;}
+.loading{padding:40px; text-align:center; color:var(--muted);}
 </style>
 </head>
 <body>
 <aside>
-  <div class="logo">
-    <div class="brand">DAYS ON</div>
-    <div class="period">통합 광고 성과 대시보드<br>2026-07-01 ~ 08-31</div>
-  </div>
-  <nav id="sidenav"></nav>
+<div class="logo">
+<div class="brand">DAYS ON</div>
+<div class="period">통합 광고 성과 대시보드<br><span id="dataRangeLabel">불러오는 중...</span></div>
+</div>
+<nav id="sidenav"></nav>
 </aside>
 <main>
-  <div class="topbar">
-    <div>
-      <h1 id="pageTitle">표지 · 요약</h1>
-      <p class="sub">담당 최연아·안희성 | 02-3775-9290 · 02-3775-9277</p>
-    </div>
-    <div class="periodbox">
-      <label>기간</label>
-      <select id="periodSelect" onchange="onPeriodChange()">
-        <option value="jul">7월</option>
-        <option value="aug" selected>8월</option>
-        <option value="w1">8월 1주차 (8/1~8/2)</option>
-        <option value="w2">8월 2주차 (8/3~8/9)</option>
-        <option value="w3">8월 3주차 (8/10~8/16)</option>
-        <option value="w4">8월 4주차 (8/17~8/23)</option>
-        <option value="w5">8월 5주차 (8/24~8/30)</option>
-        <option value="w6">8월 6주차 (8/31)</option>
-      </select>
-    </div>
-  </div>
-  <div id="app"></div>
+<div class="topbar">
+<div>
+<h1 id="pageTitle">표지 · 요약</h1>
+<p class="sub">담당 최연아·안희성 | 02-3775-9290 · 02-3775-9277</p>
+</div>
+<div class="periodbox">
+<label>보기</label>
+<select id="levelSelect" onchange="onLevelChange()">
+<option value="month">월별</option>
+<option value="week">주차(변환)별</option>
+<option value="day">일별</option>
+</select>
+<label>월</label>
+<select id="monthSelect" onchange="onMonthChange()"></select>
+<label id="weekLabelEl" style="display:none">주차</label>
+<select id="weekSelect" style="display:none" onchange="onWeekChange()"></select>
+<label id="dayLabelEl" style="display:none">일자</label>
+<select id="daySelect" style="display:none" onchange="onDayChange()"></select>
+</div>
+</div>
+<div id="app"><div class="loading">데이터를 불러오는 중입니다...</div></div>
 </main>
 
 <script>
-const CH = {
-  meta_partner: {name:"META 협력광고", cols:["노출","링크클릭","지출금액","구매","구매전환값","ROAS"],
-    month:{jul:[2550971,17041,8516948,73,3280650,39], aug:[469900,4562,3223537,61,3920500,122], wow:[-81.58,-73.23,-62.15,-16.44,19.50,215.74]},
-    weeks:{w1:[128608,614,309611,2,71400,23], w2:[125569,1007,710706,13,1080700,152], w3:[113391,1489,717956,9,787600,110], w4:[64159,756,690926,17,837400,121], w5:[33982,621,684200,20,1143400,null], w6:[4191,75,110138,0,0,null]}},
-  meta_external: {name:"META 외부링크", cols:["노출","링크클릭","지출금액","구매","구매전환값","ROAS"],
-    month:{jul:[362333,13180,2118097,1,238000,11], aug:[803297,29665,6658610,1,65100,1], wow:[121.70,125.08,214.37,0.0,-72.65,-91.30]},
-    weeks:{w1:[7585,372,118700,0,0,0], w2:[275271,12311,2894115,1,65100,2], w3:[287582,10053,2411048,0,0,0], w4:[78928,2784,788513,0,0,0], w5:[153931,4145,446234,0,0,0], w6:null}},
-  google: {name:"구글", cols:["노출","클릭","비용","전환","전환가치","ROAS"],
-    month:{jul:[1761505,109591,3543981,4,103400,3], aug:[1529057,58532,3160536,5,280507,9], wow:[-13.20,-46.59,-10.82,25.00,171.28,204.20]},
-    weeks:{w1:[3899,134,98216,1,44100,45], w2:[640096,24136,817599,2,144107,18], w3:[309930,11390,687565,0,0,0], w4:[352117,14550,707895,2,92254,13], w5:[217917,8251,813649,0,0,0], w6:[5098,71,35612,0,0,0]}},
-  naver_sa: {name:"네이버 SA", cols:["노출수","클릭수","총비용","구매","구매전환매출","ROAS"],
-    month:{jul:[6555072,48908,122991073,2696,139207460,113.19], aug:[5953979,58116,101087049,2076,125936110,124.58], wow:[-9.17,18.83,-17.81,-23.00,-9.53,10.07]},
-    weeks:{w1:[470432,5018,8406933,195,9987430,118.80], w2:[1656662,12276,21529166,487,28301820,131.46], w3:[1514320,10938,18837250,355,22347000,118.63], w4:[1321281,15287,25608302,536,32104120,125.37], w5:[871796,12724,23071506,454,30009710,130.07], w6:[119488,1873,3633892,49,3186030,87.68]}},
-  naver_gfa: {name:"네이버 GFA", cols:["노출수","클릭수","총비용","구매","구매완료전환매출","ROAS"],
-    month:{jul:[1130929,5838,3294989,180,9385000,284.83], aug:[540147,5704,2004306,107,6450060,321.81], wow:[-52.24,-2.30,-39.17,-40.56,-31.27,12.98]},
-    weeks:{w1:[43424,386,173901,6,209100,120.24], w2:[134591,1333,494928,23,1501440,303.37], w3:[127592,1217,431029,23,1312460,304.49], w4:[114176,1352,474581,30,1598980,336.92], w5:[108823,1243,385325,24,1760080,456.78], w6:[11541,173,44542,1,68000,152.66]}},
-  adboost: {name:"애드부스트", cols:["노출","클릭","지출금액","구매","구매전환값","ROAS"],
-    month:{jul:[954008,1980,3296074,168,9449930,286.70], aug:[593322,3279,4478810,292,19025230,424.78], wow:[-37.81,65.61,35.88,73.81,101.33,48.16]},
-    weeks:{w1:[39555,179,258132,16,774890,300.19], w2:[146263,643,887790,52,3330010,375.09], w3:[123173,669,976463,71,4853880,497.09], w4:[130604,802,1004374,85,5550210,552.60], w5:[129808,871,1183994,56,3727940,314.86], w6:[23919,115,168057,12,788300,469.07]}}
+const NUMFIELDS = ['impr','clicks','cost','purchase','revenue','reach','cart','cart_revenue'];
+const CH_NAMES = {
+  네이버SA:"네이버 SA", 구글:"구글", 네이버GFA:"네이버 GFA", 애드부스트:"애드부스트",
+  메타_협력광고:"META 협력광고", 메타_외부링크:"META 외부링크"
 };
+const MEDIA_KEYS = ["메타_협력광고","메타_외부링크","구글","네이버SA","네이버GFA","애드부스트"];
 
-// 캠페인별 비교 (매출 기준 상위)
-const CAMPAIGNS = {
-  meta_partner: [
-    {name:"상시_브랜드스토어_메타_전환", impr:709546, clicks:4776, cost:3017697, purchase:44, revenue:3097000, roas:"103%"},
-    {name:"전환_파라다이스그레인", impr:429781, clicks:3355, cost:5508121, purchase:27, revenue:2074820, roas:"38%"},
-    {name:"전환_프리바이오틱스", impr:53625, clicks:333, cost:1493554, purchase:25, revenue:1373700, roas:"92%"},
-    {name:"헬시페스타_브랜드스토어_메타_전환", impr:804183, clicks:4574, cost:2776734, purchase:18, revenue:829800, roas:"30%"},
-    {name:"전환_올레샷", impr:1333505, clicks:4178, cost:2888135, purchase:19, revenue:775750, roas:"27%"},
-    {name:"전환_알파프로&알파CD", impr:306713, clicks:1346, cost:1349325, purchase:12, revenue:567900, roas:"42%"},
-  ],
-  meta_external: [
-    {name:"전환_프리바이오틱스", impr:14270, clicks:171, cost:494981, purchase:12, revenue:584819, roas:"118%"},
-    {name:"트래픽_그린아세로라", impr:317905, clicks:12759, cost:4207302, purchase:2, revenue:303100, roas:"7%"},
-    {name:"어떤약사_외부링크_메타_트래픽_공동구매", impr:352423, clicks:13227, cost:3147828, purchase:0, revenue:0, roas:"0%"},
-    {name:"잘사는언니들_CJ온스타일_메타_트래픽", impr:93013, clicks:3338, cost:1479093, purchase:0, revenue:0, roas:"0%"},
-    {name:"트래픽_홈쇼핑랜딩_말레이시아", impr:190523, clicks:9621, cost:626717, purchase:0, revenue:0, roas:"0%"},
-  ],
-  naver_sa: [
-    {name:"003.✅쇼핑_그린아세로라", impr:897928, clicks:8635, cost:17596182, purchase:268, revenue:22123400, roas:"125.73%"},
-    {name:"008.✅벌크", impr:700991, clicks:6474, cost:5616133, purchase:307, revenue:15764580, roas:"280.70%"},
-    {name:"001.✅브랜드검색-데이즈온 자사몰_신규", impr:21948, clicks:3125, cost:3454000, purchase:260, revenue:18754690, roas:"542.98%"},
-    {name:"002.✅쇼핑_알파CD", impr:1400508, clicks:5091, cost:19481108, purchase:321, revenue:15150410, roas:"77.77%"},
-    {name:"002. ☑️파워_파라다이스그레인", impr:366581, clicks:15603, cost:20485666, purchase:179, revenue:13024040, roas:"63.58%"},
-    {name:"005.✅쇼핑_프리바이오틱스", impr:696326, clicks:1951, cost:4896279, purchase:244, revenue:12917860, roas:"263.83%"},
-  ],
-  naver_gfa: [
-    {name:"카탈로그_데이즈온_상시광고", impr:528088, clicks:5613, cost:1979765, purchase:106, revenue:6428280, roas:"324.70%"},
-    {name:"헬시페스타_브랜드스토어_네이버GFA_웹사이트전환_신규타겟", impr:0, clicks:0, cost:0, purchase:1, revenue:21780, roas:"0.00%"},
-    {name:"헬시페스타_브랜드스토어_네이버GFA_웹사이트전환_방문타겟", impr:0, clicks:0, cost:0, purchase:0, revenue:0, roas:"0.00%"},
-    {name:"카탈로그_데이즈온_상시광고_알수없음타겟", impr:12059, clicks:91, cost:24541, purchase:0, revenue:0, roas:"0.00%"},
-  ],
-};
+let DATA = null, META_EXTRA = null;
+let currentLevel = "month";
+let currentMonth = null, currentWeek = null, currentDay = null;
+let activeTab = "overview";
 
-// 일자별 추이 (8월, [day, cost, revenue])
-const DAILY = {
-meta_partner: [["01", 133070, 71400], ["02", 176541, 0], ["03", 134557, 188000], ["04", 103500, 0], ["05", 72984, 68400], ["06", 83083, 0], ["07", 78284, 34200], ["08", 129311, 441100], ["09", 108987, 349000], ["10", 108144, 253600], ["11", 107945, 274400], ["12", 88041, 259600], ["13", 98415, 0], ["14", 101488, 0], ["15", 86677, 0], ["16", 127246, 0], ["17", 122496, 61900], ["18", 71247, 109700], ["19", 75937, 0], ["20", 95353, 221800], ["21", 94186, 0], ["22", 105247, 82400], ["23", 126460, 361600], ["24", 118219, 435800], ["25", 109754, 160000], ["26", 83680, 162400], ["27", 95558, 64000], ["28", 82465, 115600], ["29", 83522, 0], ["30", 111002, 205600], ["31", 110138, 0]],
-meta_external: [["01", 53218, 0], ["02", 65482, 0], ["03", 163988, 0], ["04", 121266, 65100], ["05", 166192, 0], ["06", 37674, 0], ["07", 414587, 0], ["08", 709416, 0], ["09", 1280992, 0], ["10", 349551, 0], ["11", 401845, 0], ["12", 292801, 0], ["13", 370173, 0], ["14", 346789, 0], ["15", 305300, 0], ["16", 344589, 0], ["17", 360421, 0], ["18", 45714, 0], ["19", 54048, 0], ["20", 51587, 0], ["21", 69195, 0], ["22", 86859, 0], ["23", 120689, 0], ["24", 62792, 0], ["25", 63560, 0], ["26", 35311, 0], ["27", 183250, 0], ["28", 101321, 0]],
-google: [["01", 51871, 44100], ["02", 46345, 0], ["03", 118158, 0], ["04", 165153, 109907], ["05", 166263, 0], ["06", 55217, 34200], ["07", 107187, 0], ["08", 104817, 0], ["09", 100804, 0], ["10", 91058, 0], ["11", 98383, 0], ["12", 105145, 0], ["13", 92745, 0], ["14", 88593, 0], ["15", 79572, 0], ["16", 132069, 46], ["17", 107533, 74], ["18", 102115, 48000], ["19", 91117, 44180], ["20", 83359, 0], ["21", 125801, 0], ["22", 99804, 0], ["23", 98166, 0], ["24", 90160, 0], ["25", 40118, 0], ["26", 34314, 0], ["27", 147145, 0], ["28", 390795, 0], ["29", 58299, 0], ["30", 52818, 0], ["31", 35612, 0]],
-naver_sa: [["01", 3592204, 4141480], ["02", 4814729, 5845950], ["03", 2801103, 4419440], ["04", 2767379, 4625060], ["05", 3551187, 5006290], ["06", 2058159, 2074070], ["07", 2649848, 2370810], ["08", 2962240, 3782180], ["09", 4739250, 6023970], ["10", 3702223, 3946730], ["11", 2710860, 2941110], ["12", 3497140, 4989240], ["13", 2705224, 3015930], ["14", 1895548, 2042430], ["15", 1598747, 2582310], ["16", 2727509, 2829250], ["17", 3249787, 4761210], ["18", 3876159, 3987990], ["19", 1998129, 3486970], ["20", 3330262, 3866030], ["21", 2990107, 4276060], ["22", 1804685, 2866770], ["23", 8359173, 8859090], ["24", 2300692, 3882050], ["25", 3747956, 5701220], ["26", 3486399, 3735120], ["27", 2725947, 4063300], ["28", 2787164, 4303750], ["29", 2172313, 2272400], ["30", 5851035, 6051870], ["31", 3633892, 3186030]],
-naver_gfa: [["01", 86339, 154170], ["02", 87562, 54930], ["03", 87087, 539090], ["04", 81051, 115380], ["05", 73560, 42300], ["06", 63696, 163300], ["07", 62182, 0], ["08", 52578, 573970], ["09", 74774, 67400], ["10", 66656, 361900], ["11", 64067, 364550], ["12", 56699, 135100], ["13", 68659, 29070], ["14", 64753, 19900], ["15", 56743, 58140], ["16", 53452, 343800], ["17", 67327, 350120], ["18", 76840, 384730], ["19", 60980, 164410], ["20", 61514, 291950], ["21", 56688, 119700], ["22", 64708, 150880], ["23", 86524, 137190], ["24", 61229, 34200], ["25", 71004, 389660], ["26", 62255, 94870], ["27", 57385, 167010], ["28", 42859, 546940], ["29", 37786, 176600], ["30", 52807, 350800], ["31", 44542, 68000]],
-adboost: [["01", 126619, 251010], ["02", 131513, 523880], ["03", 122754, 464340], ["04", 129746, 599020], ["05", 127906, 264510], ["06", 129750, 173150], ["07", 117434, 353280], ["08", 129196, 455800], ["09", 131004, 1019910], ["10", 140001, 417400], ["11", 142462, 669680], ["12", 141289, 1337970], ["13", 140635, 471000], ["14", 143821, 411870], ["15", 127759, 896860], ["16", 140496, 649100], ["17", 126878, 1090020], ["18", 144127, 563590], ["19", 145123, 617900], ["20", 141173, 317660], ["21", 143579, 840580], ["22", 145347, 784300], ["23", 158147, 1336160], ["24", 146799, 459100], ["25", 168346, 343420], ["26", 179857, 313820], ["27", 185062, 697690], ["28", 166604, 793120], ["29", 170229, 324920], ["30", 167097, 795870], ["31", 168057, 788300]]
-};
-
-const TOP5_META_PARTNER = [
-  {name:"0727-0000_always_ollehshot_video_시딩소재_ollehshot-1", impr:35742, clicks:1631, cost:918364, purchase:18, revenue:1311200, roas:"143%"},
-  {name:"260325_동영상4", impr:8388, clicks:393, cost:1103100, purchase:6, revenue:712200, roas:"65%"},
-  {name:"260630_동영상1", impr:906001, clicks:3364, cost:1923908, purchase:14, revenue:556350, roas:"29%"},
-  {name:"260526_동영상2", impr:39329, clicks:271, cost:1213271, purchase:13, revenue:525600, roas:"43%"},
-  {name:"260529_이미지2", impr:215367, clicks:880, cost:687165, purchase:10, revenue:469900, roas:"68%"},
-];
-const CREATIVES_841547815503451 = [
-  {name:"오이맛샴 샌드위치 · 올리브오일+레몬즙 100% 유기농 올레샷", img:"https://scontent-sea1-1.xx.fbcdn.net/v/t45.1600-4/751484783_122120434143273739_7983066107914238260_n.jpg?_nc_cat=106&ccb=1-7&_nc_sid=d5bd00&_nc_ohc=ZSca108XH3QQ7kNvwFmGHVH&_nc_oc=Adqw0R5AB54W5n2_FjN8GzpkIdGZz1pSvgmC1AevGOB0_wPhaUxy5Rjj7fZkeAf1I24&_nc_zt=1&_nc_ht=scontent-sea1-1.xx&edm=AEZPnVgEAAAA&_nc_gid=3a25bK9Jrb1paS6e0Qsu-Q&_nc_tpa=Q5bMBQJqWNPgcAAAwiB7HZ1WyIl5v4wGz58mn8h3McSbj9Nyyf7xiv-QpC704uMBBE5kBRphQqEdxYF-sw&oh=00_AQL8fFIZ_3BSpOTtR6uct5G7tLOgK2LW73K_DeBAHFwZRA&oe=6A9D50CC"},
-  {name:"요즘 관리하는 사람들은 아침에 이거 먹어요 - 올레샷", img:"https://scontent-sea5-1.xx.fbcdn.net/v/t45.1600-4/756302529_122120535543273739_4030805325095155661_n.jpg?_nc_cat=102&ccb=1-7&_nc_sid=d5bd00&_nc_ohc=6ZhvJkVMu8IQ7kNvwG_ohS3&_nc_oc=AdqvmyoY9EMGTpAU3xyzAkobQCbdyQDoiI5zA2bVcIV1MgAUrC0UkzDUw0EL61BMAYQ&_nc_zt=1&_nc_ht=scontent-sea5-1.xx&edm=AEZPnVgEAAAA&_nc_gid=3a25bK9Jrb1paS6e0Qsu-Q&_nc_tpa=Q5bMBQLmhfX2Mf9d1_LMcWKP-OVsmarjTpM8cqA047C3MS5Ho1-KwqoL-a2y5Qqt5XY-AOlO1etA38Ib8A&oh=00_AQJgOQa2ukdUAtOR6UXpK3-u0peM45Nu_cLEbpPU9csSZQ&oe=6A9D3DA0"},
-  {name:"mkt.shopping.naver.com 연동 소재", img:"https://scontent-sea5-1.xx.fbcdn.net/v/t45.1600-4/755381987_122120613933273739_9127017497035198308_n.jpg?_nc_cat=111&ccb=1-7&_nc_sid=d5bd00&_nc_ohc=JjsJOkoHMFkQ7kNvwHgt1AW&_nc_oc=Adql_qK-q0TEsP-sLvBCmVqBsboyiv_Q9RPl5cb5HASTT_VRy_qdZURfb3XtW8ztI_c&_nc_zt=1&_nc_ht=scontent-sea5-1.xx&edm=AEZPnVgEAAAA&_nc_gid=3a25bK9Jrb1paS6e0Qsu-Q&_nc_tpa=Q5bMBQKidymeAjCv3vMMatQqnd_yodjUG1o7Q8tzYPfKNLQluqQaIhU9og4Hd5h8dfRdLE1K-2slpayeoA&oh=00_AQKY2UgI5i2L5xhZ314gQspNWukvyb2kMsRwvV2bxeHWig&oe=6A9D6E2A"},
-];
-const CREATIVES_791581078215593 = [
-  {name:"[단 7일] 데이즈온 공식몰 오픈 혜택 총집합💙", img:"https://scontent-sea5-1.xx.fbcdn.net/v/t45.1600-4/785149601_122124173487273739_8273652217760628304_n.jpg?_nc_cat=105&ccb=1-7&_nc_sid=d5bd00&_nc_ohc=BDLQJIgmi1gQ7kNvwEbiroR&_nc_oc=AdrETmrrhnTCvhvQ1BTaK2e88Py1cpHNTynhuM-HhUvG-pfVSpdgb0131DkIs5BS-SM&_nc_zt=1&_nc_ht=scontent-sea5-1.xx&edm=AEZPnVgEAAAA&_nc_gid=RborEOlLUztjpP3gB8swUA&_nc_tpa=Q5bMBQIpcTZs-3UZEHLPFQANr4Ks4k7K6EVDU2pmWRvp_CEQxcBUolEjNptIzdKqutuaUEIRz5t285lMsw&oh=00_AQLmWcXDykxc8TNzUQ5MEmRoLYn6yynlmUCKovHv1rjkCQ&oe=6A9C79E7"},
-  {name:"[본품 증정] 데이즈온 공식몰 오픈 이벤트💜", img:"https://scontent-sea5-1.xx.fbcdn.net/v/t45.1600-4/786353627_122124173727273739_819662380486993604_n.jpg?_nc_cat=105&ccb=1-7&_nc_sid=d5bd00&_nc_ohc=36G_kJouXoEQ7kNvwEl4xfz&_nc_oc=Adru_ENGEkH3_xcHyxqurrt20Gj2tp7fqOIZ8fvtkgkICm1zqGmYpUILFUxKw2rS1UU&_nc_zt=1&_nc_ht=scontent-sea5-1.xx&edm=AEZPnVgEAAAA&_nc_gid=RborEOlLUztjpP3gB8swUA&_nc_tpa=Q5bMBQKbe_5FLfdzeU9RluSGxIfSEBXozeyUc9FYmew7xG6guR0wwGTMEdSUQYF7_q9bbVar4j4ApXV5KA&oh=00_AQKDP-UupIjPYPPYMNXw_q1FgVfitAfCaKKdLFaLAcyALw&oe=6A9C8C66"},
-  {name:"선착순 1만원 쿠폰🎟️ 데이즈온 공식몰 리뉴얼 오픈", img:"https://scontent-sea5-1.xx.fbcdn.net/v/t45.1600-4/792841467_122124173763273739_3413199537560691429_n.jpg?_nc_cat=111&ccb=1-7&_nc_sid=d5bd00&_nc_ohc=aCzu26Hv0UQQ7kNvwE_cGkd&_nc_oc=AdrwKkcnVZwTaLwZowwpMD-ggZWzGykmoV98-o7U0mpL-0beVDQe7iMEu-6UnaNitZA&_nc_zt=1&_nc_ht=scontent-sea5-1.xx&edm=AEZPnVgEAAAA&_nc_gid=RborEOlLUztjpP3gB8swUA&_nc_tpa=Q5bMBQLkk-wOd9qUZVbzkUDmwuZz_23X5H3uGYCBNdtzVqP_HGYbarUDu4j7LlqIajMjhUYa5EfBKihcnA&oh=00_AQJphooR81Fon3iXAHoNofr_i_gjqfHfeLIuxehWkxvd7Q&oe=6A9C77D1"},
-  {name:"쿠폰부터 본품 증정까지🎁 데이즈온 리뉴얼 이벤트", img:"https://scontent-sea1-1.xx.fbcdn.net/v/t45.1600-4/792148766_122124173703273739_4405113690914959767_n.jpg?_nc_cat=104&ccb=1-7&_nc_sid=d5bd00&_nc_ohc=c-qBTWlYgTAQ7kNvwGKmrlW&_nc_oc=Adp5izmfLxV7Ak7jmLjewPcORzo60QHOOnL8N7k1uP5yov1SRFM4-uovHYWVNodwbJw&_nc_zt=1&_nc_ht=scontent-sea1-1.xx&edm=AEZPnVgEAAAA&_nc_gid=RborEOlLUztjpP3gB8swUA&_nc_tpa=Q5bMBQJagi9UfIZoGICSpg_IyWIZ53Z8-lCezEX_kci5lxEwJNIr7Ag18IQSMfgAFojmEcS-FB1EPJtcHw&oh=00_AQLkApB3BbZV_nFYTr91mBx1Ys9hGJm6WLOH9uluwOPOvg&oe=6A9C8CB7"},
-];
-
-const EXTERNAL_TOP5_CTR = [
-  {name:"0803-0805_Malaysia Live_alpha CD_video_alpha CD-중국어-2", impr:6325, clicks:374, cost:15157, ctr:"5.91%"},
-  {name:"0807-0809_Successful Sisters_paradisegrain_image_paradisegrain-1", impr:3089, clicks:172, cost:59252, ctr:"5.57%"},
-  {name:"0807-0809_Successful Sisters_paradisegrain_image_paradisegrain-6", impr:349, clicks:18, cost:5659, ctr:"5.16%"},
-  {name:"260710_영상2_중국어", impr:13695, clicks:695, cost:43202, ctr:"5.07%"},
-  {name:"260703_영상2_영어", impr:47344, clicks:2275, cost:168368, ctr:"4.81%"},
-];
-function isWeekPeriod(){ return currentPeriod.startsWith('w'); }
 function fmt(n){ if(n===null||n===undefined) return "-"; if(typeof n==="string") return n; return Math.round(n).toLocaleString('ko-KR'); }
-function pct(n, digits=1){ if(n===null||n===undefined) return "-"; return (n>0?"+":"") + n.toFixed(digits) + "%"; }
-function deltaClass(n){ if(n===null||n===undefined) return "flat"; return n>0?"up":(n<0?"down":"flat"); }
-function periodLabel(){ return document.getElementById('periodSelect').selectedOptions[0].text; }
-function getValue(c, idx){
-  if(!c.month) return null;
-  if(currentPeriod === "jul") return c.month.jul[idx];
-  if(currentPeriod === "aug") return c.month.aug[idx];
-  return (c.weeks && c.weeks[currentPeriod]) ? c.weeks[currentPeriod][idx] : null;
+function pct(n){ if(n===null||n===undefined) return "-"; return n+"%"; }
+
+async function boot(){
+  const [d, m] = await Promise.all([
+    fetch('data.json').then(r=>r.json()),
+    fetch('meta_extra.json').then(r=>r.json())
+  ]);
+  DATA = d; META_EXTRA = m;
+  currentMonth = DATA.months[DATA.months.length-1] || DATA.months[0];
+  document.getElementById('dataRangeLabel').textContent = `${DATA.months[0]} ~ ${DATA.months[DATA.months.length-1]}`;
+  buildMonthSelect();
+  render();
+}
+
+function buildMonthSelect(){
+  const sel = document.getElementById('monthSelect');
+  sel.innerHTML = DATA.months.map(m=>`<option value="${m}" ${m===currentMonth?'selected':''}>${m}</option>`).join('');
+}
+function buildWeekSelect(){
+  const weeks = (DATA.weeks_by_month[currentMonth]||[]);
+  currentWeek = weeks[0] || null;
+  const sel = document.getElementById('weekSelect');
+  sel.innerHTML = weeks.map(w=>`<option value="${w}">${w}</option>`).join('');
+}
+function buildDaySelect(){
+  const key = `${currentMonth}|${currentWeek}`;
+  const days = DATA.days_by_week[key] || [];
+  currentDay = days[0] || null;
+  const sel = document.getElementById('daySelect');
+  sel.innerHTML = days.map(d=>`<option value="${d}">${d}</option>`).join('');
+}
+
+function onLevelChange(){
+  currentLevel = document.getElementById('levelSelect').value;
+  document.getElementById('weekLabelEl').style.display = currentLevel!=='month' ? '' : 'none';
+  document.getElementById('weekSelect').style.display = currentLevel!=='month' ? '' : 'none';
+  document.getElementById('dayLabelEl').style.display = currentLevel==='day' ? '' : 'none';
+  document.getElementById('daySelect').style.display = currentLevel==='day' ? '' : 'none';
+  if(currentLevel!=='month'){ buildWeekSelect(); }
+  if(currentLevel==='day'){ buildDaySelect(); }
+  renderApp();
+}
+function onMonthChange(){
+  currentMonth = document.getElementById('monthSelect').value;
+  if(currentLevel!=='month'){ buildWeekSelect(); document.getElementById('weekSelect').innerHTML = (DATA.weeks_by_month[currentMonth]||[]).map(w=>`<option value="${w}">${w}</option>`).join(''); }
+  if(currentLevel==='day'){ buildDaySelect(); }
+  renderApp();
+}
+function onWeekChange(){
+  currentWeek = document.getElementById('weekSelect').value;
+  if(currentLevel==='day'){ buildDaySelect(); }
+  renderApp();
+}
+function onDayChange(){
+  currentDay = document.getElementById('daySelect').value;
+  renderApp();
+}
+
+function periodLabel(){
+  if(currentLevel==='month') return currentMonth;
+  if(currentLevel==='week') return currentWeek;
+  return currentDay;
+}
+
+function getMetrics(mediaKey){
+  const m = DATA.media[mediaKey];
+  if(!m) return null;
+  if(currentLevel==='month') return m.monthly[currentMonth] || null;
+  if(currentLevel==='week') return m.weekly[`${currentMonth}|${currentWeek}`] || null;
+  return m.daily[currentDay] || null;
 }
 
 function barChart(rows, unit){
@@ -218,10 +193,10 @@ function barChart(rows, unit){
     </div>`).join('')}</div>`;
 }
 
-// SVG dual-line chart: cost(indigo) vs revenue(cyan) over days
-function lineChart(data, w=760, h=220){
-  if(!data || data.length===0) return `<p class="desc">일자별 데이터가 부족합니다.</p>`;
-  const pad = {l:60,r:16,t:14,b:26};
+function lineChart(days, dailyMap, w=760, h=220){
+  if(!days || days.length===0) return `<p class="desc">일별 데이터가 부족합니다.</p>`;
+  const data = days.map(d=>[d, (dailyMap[d]?.cost)||0, (dailyMap[d]?.revenue)||0]);
+  const pad = {l:70,r:16,t:14,b:26};
   const iw = w-pad.l-pad.r, ih = h-pad.t-pad.b;
   const maxV = Math.max(...data.map(d=>Math.max(d[1],d[2])), 1);
   const n = data.length;
@@ -230,9 +205,10 @@ function lineChart(data, w=760, h=220){
   const path = (idx) => data.map((d,i)=>`${i===0?'M':'L'}${x(i).toFixed(1)},${y(d[idx]).toFixed(1)}`).join(' ');
   const ticks = [0,0.25,0.5,0.75,1].map(f=>Math.round(maxV*f));
   const gridlines = ticks.map(t=>`<line x1="${pad.l}" x2="${w-pad.r}" y1="${y(t).toFixed(1)}" y2="${y(t).toFixed(1)}" stroke="#eee" stroke-width="1"/><text x="${pad.l-8}" y="${(y(t)+3).toFixed(1)}" font-size="9.5" fill="#9ca3af" text-anchor="end">${fmt(t)}</text>`).join('');
-  const xlabels = data.filter((d,i)=> i%5===0 || i===n-1).map(d=>{
+  const step = Math.max(1, Math.floor(n/8));
+  const xlabels = data.filter((d,i)=> i%step===0 || i===n-1).map(d=>{
     const i = data.indexOf(d);
-    return `<text x="${x(i).toFixed(1)}" y="${h-6}" font-size="9.5" fill="#9ca3af" text-anchor="middle">${d[0]}일</text>`;
+    return `<text x="${x(i).toFixed(1)}" y="${h-6}" font-size="9" fill="#9ca3af" text-anchor="middle">${d[0].slice(5)}</text>`;
   }).join('');
   return `<svg viewBox="0 0 ${w} ${h}" style="width:100%; height:auto;">
     ${gridlines}
@@ -243,17 +219,15 @@ function lineChart(data, w=760, h=220){
   <div class="legend"><span><i style="background:#4f46e5"></i>광고비</span><span><i style="background:#06b6d4"></i>구매전환매출</span></div>`;
 }
 
-// simple donut for channel cost share (CSS conic-gradient)
-function donutChart(){
-  const items = Object.values(CH).filter(c=>c.month).map(c=>({name:c.name, v:getValue(c,2)||0}));
-  const total = items.reduce((s,i)=>s+i.v,0);
-  const colors = ["#4f46e5","#06b6d4","#f59e0b","#10b981","#ec4899"];
+function donutChart(items){
+  const total = items.reduce((s,i)=>s+i.v,0) || 1;
+  const colors = ["#4f46e5","#06b6d4","#f59e0b","#10b981","#ec4899","#8b5cf6"];
   let acc = 0;
   const stops = items.map((it,i)=>{
     const start = acc/total*360; acc += it.v; const end = acc/total*360;
     return `${colors[i%colors.length]} ${start.toFixed(1)}deg ${end.toFixed(1)}deg`;
   }).join(', ');
-  const legend = items.map((it,i)=>`<div class="row"><i style="background:${colors[i%colors.length]}"></i>${it.name} · ${(it.v/total*100).toFixed(1)}% (${fmt(it.v)}원)</div>`).join('');
+  const legend = items.map((it,i)=>`<div class="row"><i style="background:${colors[i%colors.length]}"></i>${it.label} · ${(it.v/total*100).toFixed(1)}% (${fmt(it.v)}원)</div>`).join('');
   return `<div class="donut-wrap">
     <div style="width:140px;height:140px;border-radius:50%;background:conic-gradient(${stops}); flex-shrink:0; box-shadow:inset 0 0 0 22px #fff, 0 0 0 1px #eee;"></div>
     <div class="donut-legend">${legend}</div>
@@ -262,20 +236,22 @@ function donutChart(){
 
 function overviewHTML(){
   let totalCost=0, totalRev=0;
-  Object.values(CH).forEach(c=>{ if(c.month){ totalCost += (getValue(c,2)||0); totalRev += (getValue(c,4)||0); } });
-  const costRows = Object.values(CH).filter(c=>c.month).map(c=>({label:c.name, v:getValue(c,2)||0}));
-  const roasRows = Object.values(CH).filter(c=>c.month).map(c=>({label:c.name, v:getValue(c,5)||0}));
-  let cards = Object.entries(CH).map(([key,c])=>{
-    const roas = getValue(c,5); const cost = getValue(c,2);
-    return `<div class="card" style="cursor:pointer" onclick="showTab('${key}')">
-      <div class="label">${c.name}</div>
-      <div class="value">${roas!==null?roas+'%':'-'} <span style="font-size:10.5px;color:var(--muted);font-weight:400;">ROAS</span></div>
-      <div class="delta flat">${periodLabel()} 광고비 ${cost!==null?fmt(cost)+'원':'-'}</div>
-    </div>`;
-  }).join('');
+  const costRows=[], roasRows=[], cards=[];
+  MEDIA_KEYS.forEach(k=>{
+    const met = getMetrics(k);
+    const cost = met?met.cost:0, revenue = met?met.revenue:0, roas = met?met.roas:0;
+    totalCost += cost; totalRev += revenue;
+    costRows.push({label:CH_NAMES[k], v:cost});
+    roasRows.push({label:CH_NAMES[k], v:roas});
+    cards.push(`<div class="card" style="cursor:pointer" onclick="showTab('${k}')">
+      <div class="label">${CH_NAMES[k]}</div>
+      <div class="value">${met? roas+'%':'-'} <span style="font-size:10.5px;color:var(--muted);font-weight:400;">ROAS</span></div>
+      <div class="delta">${periodLabel()} 광고비 ${met? fmt(cost)+'원':'데이터 없음'}</div>
+    </div>`);
+  });
   return `
   <div class="panel"><h2>전체 채널 통합 요약 · ${periodLabel()}</h2>
-    <p class="desc">메타(협력광고·외부링크) · 구글 · 네이버(SA·GFA) 합산 (애드부스트 별도)</p>
+    <p class="desc">메타(협력광고·외부링크) · 구글 · 네이버(SA·GFA) · 애드부스트 합산</p>
     <div class="grid2">
       <div class="card"><div class="label">총 광고비</div><div class="value">${fmt(totalCost)}원</div></div>
       <div class="card"><div class="label">총 구매전환매출</div><div class="value">${fmt(totalRev)}원</div></div>
@@ -283,124 +259,110 @@ function overviewHTML(){
   </div>
   <div class="grid3">
     <div class="panel"><h2>채널별 광고비 비교 · ${periodLabel()}</h2>${barChart(costRows,"원")}</div>
-    <div class="panel"><h2>${periodLabel()} 광고비 채널 비중</h2>${donutChart()}</div>
+    <div class="panel"><h2>${periodLabel()} 광고비 채널 비중</h2>${donutChart(costRows)}</div>
   </div>
   <div class="panel"><h2>채널별 ROAS 비교 · ${periodLabel()}</h2>${barChart(roasRows,"%")}</div>
-  <div class="panel"><h2>채널별 성과 한눈에 보기</h2><p class="desc">카드를 클릭하면 왼쪽 매체 메뉴로 이동합니다.</p><div class="grid2">${cards}</div></div>`;
+  <div class="panel"><h2>채널별 성과 한눈에 보기</h2><p class="desc">카드를 클릭하면 왼쪽 매체 메뉴로 이동합니다.</p><div class="grid2">${cards.join('')}</div></div>`;
 }
 
 function channelTableHTML(key){
-  const c = CH[key];
-  if(!c.month){
-    return `<div class="panel"><h2>${c.name}</h2>
-      <p class="desc">8월 4주차부터 상품·캠페인 세분화 운영을 시작하여 월별/주차별 비교표는 별도 산출되지 않았습니다.</p>
-      <div class="note">${c.note}</div></div>` + dailySection(key);
+  const met = getMetrics(key);
+  const name = CH_NAMES[key];
+  if(!met){
+    return `<div class="panel"><h2>${name}</h2><p class="desc">선택한 기간(${periodLabel()})에는 데이터가 없습니다.</p></div>` + dailySection(key);
   }
-  const wdata = isWeekPeriod() ? (c.weeks ? c.weeks[currentPeriod] : null) : (currentPeriod==="jul" ? c.month.jul : c.month.aug);
-  let rowsHtml, barRows;
-  if(!wdata){
-    rowsHtml = `<tr><td colspan="2" style="color:var(--muted)">해당 기간 데이터가 부족하거나 집계되지 않았습니다.</td></tr>`;
-    barRows = [];
-  } else {
-    rowsHtml = c.cols.map((label,i)=>{
-      const isPct = i===5;
-      return `<tr><td>${label}</td><td class="num">${isPct? (wdata[i]!==null?wdata[i]+'%':'-') : fmt(wdata[i])}</td></tr>`;
-    }).join('');
-    barRows = c.cols.map((label,i)=> i<5 ? {label, v:wdata[i]||0} : null).filter(Boolean);
-  }
-  const WEEK_LABELS = ["1주(8/1~2)","2주(8/3~9)","3주(8/10~16)","4주(8/17~23)","5주(8/24~30)","6주(8/31)"];
-  const weekTrendRows = ["w1","w2","w3","w4","w5","w6"].map((wk,i)=>({label:WEEK_LABELS[i], v: c.weeks && c.weeks[wk] ? (c.weeks[wk][2]||0) : 0}));
-  const campaignHtml = campaignSection(key);
+  const rowDefs = [
+    ["노출", met.impr], ["도달", met.reach], ["클릭", met.clicks], ["비용", met.cost],
+    ["구매", met.purchase], ["구매매출", met.revenue], ["장바구니담기", met.cart], ["장바구니매출", met.cart_revenue],
+    ["CTR", met.ctr+"%"], ["CPC", met.cpc], ["CPM", met.cpm], ["CPA", met.cpa], ["ROAS", met.roas+"%"], ["객단가", met.aov], ["구매전환율", met.cvr+"%"]
+  ];
+  const rowsHtml = rowDefs.map(([label,v])=>`<tr><td>${label}</td><td class="num">${typeof v==='string'?v:fmt(v)}</td></tr>`).join('');
+  const barRows = [
+    {label:"노출", v:met.impr}, {label:"클릭", v:met.clicks}, {label:"비용", v:met.cost}, {label:"구매매출", v:met.revenue}
+  ];
+  const adjNote = (key==="네이버SA" && DATA.adjustments && DATA.adjustments["네이버SA"] && currentLevel==='month' && DATA.adjustments["네이버SA"]["월별_비용_보정"][currentMonth])
+    ? `<div class="note">📌 ${DATA.adjustments["네이버SA"].note} (${currentMonth} +${fmt(DATA.adjustments["네이버SA"]["월별_비용_보정"][currentMonth])}원 반영됨)</div>` : '';
   return `<div class="panel">
-    <h2>${c.name} · ${periodLabel()}</h2>
-    <p class="desc">선택한 기간의 실적입니다. 상단 드롭다운에서 7월 / 8월 / 8월 주차별로 바꿀 수 있어요.</p>
-    <div class="table-wrap"><table>
-      <thead><tr><th>지표</th><th>${periodLabel()}</th></tr></thead>
-      <tbody>${rowsHtml}</tbody>
-    </table></div>
+    <h2>${name} · ${periodLabel()}</h2>
+    <p class="desc">선택한 기간의 실적입니다. 상단에서 월별/주차(변환)별/일별로 바꿀 수 있어요.</p>
+    <div class="table-wrap"><table><thead><tr><th>지표</th><th>${periodLabel()}</th></tr></thead><tbody>${rowsHtml}</tbody></table></div>
+    ${adjNote}
   </div>
-  <div class="grid3">
-    <div class="panel"><h2>${c.name} · 지표 비교 (${periodLabel()})</h2>${barRows.length ? barChart(barRows,"") : '<p class="desc">표시할 데이터가 없습니다.</p>'}</div>
-    <div class="panel"><h2>8월 주차별 광고비 추이</h2>${barChart(weekTrendRows,"원")}</div>
-  </div>
+  <div class="panel"><h2>${name} · 지표 비교 (${periodLabel()})</h2>${barChart(barRows,"")}</div>
   ${dailySection(key)}
-  ${campaignHtml}`;
+  ${campaignSection(key)}
+  ${key.startsWith('메타_') ? metaExtraSection(key) : ''}`;
 }
 
 function dailySection(key){
-  const d = DAILY[key];
-  return `<div class="panel"><h2>일별 추이 · 8월 (광고비 vs 구매전환매출)</h2>
+  const m = DATA.media[key];
+  let days;
+  // scope days to current selection
+  if(currentLevel==='week'){
+    days = DATA.days_by_week[`${currentMonth}|${currentWeek}`] || [];
+  } else if(currentLevel==='day'){
+    days = [currentDay];
+  } else {
+    days = Object.keys(m.daily).filter(d => {
+      // find if this date's month equals currentMonth via any week mapping
+      return Object.keys(DATA.days_by_week).some(k => k.startsWith(currentMonth+'|') && DATA.days_by_week[k].includes(d));
+    }).sort();
+  }
+  const tableRows = days.map(d=>{
+    const met = m.daily[d];
+    if(!met) return `<tr><td>${d}</td><td colspan="6" style="color:var(--muted)">데이터 없음</td></tr>`;
+    return `<tr><td>${d}</td><td class="num">${fmt(met.impr)}</td><td class="num">${fmt(met.clicks)}</td><td class="num">${fmt(met.cost)}원</td><td class="num">${fmt(met.purchase)}건</td><td class="num">${fmt(met.revenue)}원</td><td class="num">${met.roas}%</td></tr>`;
+  }).join('');
+  return `<div class="panel"><h2>일별 추이 · ${periodLabel()} (광고비 vs 구매전환매출)</h2>
     <p class="desc">일 단위로 광고비와 구매전환매출의 흐름을 함께 볼 수 있습니다.</p>
-    ${lineChart(d)}
+    ${lineChart(days, m.daily)}
+    <div class="table-wrap" style="margin-top:16px"><table>
+      <thead><tr><th>날짜</th><th>노출</th><th>클릭</th><th>비용</th><th>구매</th><th>구매매출</th><th>ROAS</th></tr></thead>
+      <tbody>${tableRows || '<tr><td colspan="7" style="color:var(--muted)">표시할 일자가 없습니다.</td></tr>'}</tbody>
+    </table></div>
   </div>`;
 }
 
 function campaignSection(key){
-  const list = CAMPAIGNS[key];
-  if(!list){
-    if(key==="google") return `<div class="panel"><h2>캠페인별 성과</h2><p class="desc">원본 시트의 구글 캠페인별 비교표가 수식 오류(#REF!)로 비어 있어 이번 리포트에는 반영하지 못했습니다.</p></div>`;
-    return '';
-  }
-  const rows = list.map((c,i)=>`<tr><td><span class="rankbadge">${i+1}</span>${c.name}</td><td class="num">${fmt(c.impr)}</td><td class="num">${fmt(c.clicks)}</td><td class="num">${fmt(c.cost)}원</td><td class="num">${c.purchase}건</td><td class="num">${fmt(c.revenue)}원</td><td class="num">${c.roas}</td></tr>`).join('');
+  const list = Object.entries(DATA.media[key].campaign || {});
+  if(list.length===0) return '';
+  const rows = list.slice(0,10).map(([name,c],i)=>`<tr><td><span class="rankbadge">${i+1}</span>${name}</td><td class="num">${fmt(c.impr)}</td><td class="num">${fmt(c.clicks)}</td><td class="num">${fmt(c.cost)}원</td><td class="num">${fmt(c.purchase)}건</td><td class="num">${fmt(c.revenue)}원</td><td class="num">${c.roas}%</td></tr>`).join('');
   return `<div class="panel"><h2>캠페인별 성과 (구매전환매출 상위)</h2>
-    <p class="desc">8월 누적 기준, 매출 상위 캠페인</p>
-    <div class="table-wrap"><table>
-      <thead><tr><th>캠페인</th><th>노출</th><th>클릭</th><th>지출금액</th><th>구매</th><th>구매전환매출</th><th>ROAS</th></tr></thead>
-      <tbody>${rows}</tbody>
-    </table></div>
+    <p class="desc">전체 기간 누적 기준, 매출 상위 캠페인</p>
+    <div class="table-wrap"><table><thead><tr><th>캠페인</th><th>노출</th><th>클릭</th><th>비용</th><th>구매</th><th>구매매출</th><th>ROAS</th></tr></thead><tbody>${rows}</tbody></table></div>
   </div>`;
 }
 
-function creativeCards(list){
-  return list.map((c,i)=>`
-    <div class="creative-card">
-      <div class="rank">#${i+1}</div>
-      <img src="${c.img}" alt="${c.name}" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'noimg',textContent:'이미지 로드 실패'}))">
-      <div class="info"><div class="cname">${c.name}</div></div>
-    </div>`).join('');
-}
-
-function top5HTML(){
-  const rows = TOP5_META_PARTNER.map((c,i)=>`<tr><td>${i+1}</td><td>${c.name}</td><td class="num">${fmt(c.impr)}</td><td class="num">${fmt(c.clicks)}</td><td class="num">${fmt(c.cost)}원</td><td class="num">${c.purchase}건</td><td class="num">${fmt(c.revenue)}원</td><td class="num">${c.roas}</td></tr>`).join('');
+function metaExtraSection(key){
+  const acct = META_EXTRA[key];
+  if(!acct) return '';
+  const devRows = acct.device.map(d=>({label:d.label, v:d.cost}));
+  const genderRows = acct.gender.map(d=>({label:d.label, v:d.cost}));
+  const placeRows = acct.placement.map(d=>({label:d.label, v:d.cost}));
+  const top5table = (list, title, metricLabel, valueFn) => `
+    <div class="panel"><h2>${title} <span class="acct-badge">${acct.account_id}</span></h2>
+    <p class="desc">Meta Ads MCP 실시간 조회 (전체 기간 누적)</p>
+    <div class="table-wrap"><table><thead><tr><th>순위</th><th>소재명</th><th>노출</th><th>클릭</th><th>지출금액</th><th>구매</th><th>구매매출</th></tr></thead>
+    <tbody>${list.map((c,i)=>`<tr><td>${i+1}</td><td>${c.name}</td><td class="num">${fmt(c.impr)}</td><td class="num">${fmt(c.clicks)}</td><td class="num">${fmt(c.cost)}원</td><td class="num">${fmt(c.purchase)}건</td><td class="num">${fmt(c.revenue)}원</td></tr>`).join('')}</tbody>
+    </table></div></div>`;
   return `
-  <div class="panel">
-    <h2>소재 성과 TOP5 · META 협력광고 (구매전환매출 기준, 8월)</h2>
-    <p class="desc">구글 시트 "소재별 비교" 표 기준 · 구매전환매출이 가장 높았던 소재 5개 (이 순위의 원본 소재는 6~7월 집행분이라 계정에서 보관 만료되어 이미지 재조회는 불가)</p>
-    <div class="table-wrap"><table>
-      <thead><tr><th>순위</th><th>소재명</th><th>노출</th><th>클릭</th><th>지출금액</th><th>구매</th><th>구매전환매출</th><th>ROAS</th></tr></thead>
-      <tbody>${rows}</tbody>
-    </table></div>
-  </div>
-  <div class="panel">
-    <h2>META 협력광고 계정 소재 (공유 구매 성과) <span class="acct-badge a1">841547815503451</span></h2>
-    <p class="desc">Meta Ads MCP로 실시간 조회한 실제 소재 · 협력광고는 파트너 페이지 공동 노출 기반으로, 아래 소재들의 "구매" 실적은 <b>공유 항목이 포함된 구매(Shared Purchase)</b> 기준으로 집계됩니다.</p>
-    <div class="top5-grid">${creativeCards(CREATIVES_841547815503451)}</div>
-    <div class="note">📌 공유 구매란: 파트너(예: 올리브영 등)와 공동 노출되는 협력광고 특성상, 전환 기여가 데이즈온과 파트너 페이지 사이에 공유되는 구조입니다. 이 계정의 구매·매출 지표는 이 "공유 귀속" 기준값입니다.</div>
-  </div>
-  <div class="panel">
-    <h2>META 외부링크 · 소재 성과 TOP5 (클릭률 CTR 기준)</h2>
-    <p class="desc">외부링크 계정은 구매 전환이 거의 없어(전월 대비 매출 -72.65%), 매출 대신 <b>클릭률(CTR)</b> 기준으로 상위 소재를 뽑았습니다.</p>
-    <div class="table-wrap"><table>
-      <thead><tr><th>순위</th><th>소재명</th><th>노출</th><th>클릭</th><th>지출금액</th><th>CTR</th></tr></thead>
-      <tbody>${EXTERNAL_TOP5_CTR.map((c,i)=>`<tr><td>${i+1}</td><td>${c.name}</td><td class="num">${fmt(c.impr)}</td><td class="num">${fmt(c.clicks)}</td><td class="num">${fmt(c.cost)}원</td><td class="num" style="font-weight:700;color:var(--accent)">${c.ctr}</td></tr>`).join('')}</tbody>
-    </table></div>
-  </div>
-  <div class="panel">
-    <h2>META 외부링크 계정 소재 <span class="acct-badge a2">791581078215593</span></h2>
-    <p class="desc">Meta Ads MCP로 실시간 조회한 실제 소재 (자사몰 오픈 이벤트 캠페인 중심)</p>
-    <div class="top5-grid">${creativeCards(CREATIVES_791581078215593)}</div>
-  </div>`;
+  <div class="panel"><h2>기기별 성과 <span class="acct-badge">${acct.account_id}</span></h2>${barChart(devRows,"원")}</div>
+  <div class="panel"><h2>성별 성과 <span class="acct-badge">${acct.account_id}</span></h2>${barChart(genderRows,"원")}</div>
+  <div class="panel"><h2>지면별 성과 <span class="acct-badge">${acct.account_id}</span></h2>${barChart(placeRows,"원")}</div>
+  ${top5table(acct.top5_purchase, '소재 성과 TOP5 · 구매 기준', '구매', c=>c.purchase)}
+  ${top5table(acct.top5_revenue, '소재 성과 TOP5 · 구매매출 기준', '매출', c=>c.revenue)}
+  ${top5table(acct.top5_clicks, '소재 성과 TOP5 · 클릭 기준', '클릭', c=>c.clicks)}
+  `;
 }
 
 const TABS = [
   {key:"overview", label:"표지 · 요약", group:"메인"},
-  {key:"meta_partner", label:"META 협력광고", group:"매체별 리포트"},
-  {key:"meta_external", label:"META 외부링크", group:"매체별 리포트"},
-  {key:"google", label:"구글", group:"매체별 리포트"},
-  {key:"naver_sa", label:"네이버 SA", group:"매체별 리포트"},
-  {key:"naver_gfa", label:"네이버 GFA", group:"매체별 리포트"},
-  {key:"adboost", label:"애드부스트", group:"매체별 리포트"},
-  {key:"top5", label:"소재 성과 TOP5", group:"소재 분석"},
+  {key:"메타_협력광고", label:"META 협력광고", group:"매체별 리포트"},
+  {key:"메타_외부링크", label:"META 외부링크", group:"매체별 리포트"},
+  {key:"구글", label:"구글", group:"매체별 리포트"},
+  {key:"네이버SA", label:"네이버 SA", group:"매체별 리포트"},
+  {key:"네이버GFA", label:"네이버 GFA", group:"매체별 리포트"},
+  {key:"애드부스트", label:"애드부스트", group:"매체별 리포트"},
 ];
 
 function render(){
@@ -414,31 +376,26 @@ function render(){
 function renderApp(){
   const app = document.getElementById('app');
   let content = `<section class="tab active" id="tab-overview">${overviewHTML()}</section>`;
-  TABS.filter(t=>t.key!=="overview" && t.key!=="top5").forEach(t=>{
+  TABS.filter(t=>t.key!=="overview").forEach(t=>{
     content += `<section class="tab" id="tab-${t.key}">${channelTableHTML(t.key)}</section>`;
   });
-  content += `<section class="tab" id="tab-top5">${top5HTML()}</section>`;
-  content += `<footer>DAYS ON 통합 광고 성과 대시보드 · 데이터 출처: 광고주 제공 통합 리포트 시트(메타/네이버/구글) 및 Meta Ads MCP 실시간 조회(계정 841547815503451, 791581078215593) · 소재 썸네일은 Meta CDN 실시간 링크로, 발급 후 며칠이 지나면 만료되어 깨질 수 있습니다.</footer>`;
-  const activeKey = document.querySelector('#sidenav button.active')?.dataset.key || 'overview';
+  content += `<footer>DAYS ON 통합 광고 성과 대시보드 · 데이터 출처: 광고주 제공 원본 raw 시트(메타/네이버/구글/애드부스트) 집계 및 Meta Ads MCP 실시간 조회 · 이 페이지는 정적 데이터(data.json) 기준이며, 최신화하려면 raw 데이터를 갱신한 뒤 data.json을 다시 생성해 커밋하세요.</footer>`;
   app.innerHTML = content;
-  showTab(activeKey);
+  showTab(activeTab);
 }
 
 function showTab(key){
+  activeTab = key;
   document.querySelectorAll('section.tab').forEach(s=>s.classList.remove('active'));
-  document.getElementById('tab-'+key).classList.add('active');
+  const el = document.getElementById('tab-'+key);
+  if(el) el.classList.add('active');
   document.querySelectorAll('#sidenav button').forEach(b=>b.classList.toggle('active', b.dataset.key===key));
   const t = TABS.find(t=>t.key===key);
-  document.getElementById('pageTitle').textContent = t.label;
+  document.getElementById('pageTitle').textContent = t ? t.label : key;
   window.scrollTo({top:0, behavior:'smooth'});
 }
 
-function onPeriodChange(){
-  currentPeriod = document.getElementById('periodSelect').value;
-  renderApp();
-}
-
-render();
+boot();
 </script>
 </body>
 </html>
