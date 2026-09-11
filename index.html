@@ -358,7 +358,25 @@ function channelTableHTML(key){
   </div>
   <div class="panel"><h2>${name} · 지표 비교 (${periodLabel()})</h2>${barChart(barRows,"")}</div>
   ${dailySection(key)}
-  ${campaignSection(key)}`;
+  ${campaignSection(key)}
+  ${segmentSection(key)}`;
+}
+
+function segmentSection(key){
+  const seg = DATA.media[key].segment;
+  if(!seg || Object.keys(seg).length===0) return '';
+  const isGFA = key === "네이버GFA";
+  const title = isGFA ? "연령 및 성별 분석" : "노출 위치별 분석";
+  const rows = Object.entries(seg).slice(0,15).map(([label,v])=>({label, v:v.cost}));
+  const tableRows = Object.entries(seg).slice(0,15).map(([label,v])=>`<tr><td>${label}</td><td class="num">${fmt(v.impr)}</td><td class="num">${fmt(v.clicks)}</td><td class="num">${fmt(v.cost)}원</td><td class="num">${fmt(v.purchase)}건</td><td class="num">${fmt(v.revenue)}원</td><td class="num">${v.roas}%</td></tr>`).join('');
+  return `<div class="panel"><h2>${CH_NAMES[key]} · ${title}</h2>
+    <p class="desc">전체 기간 누적 기준, 비용 상위 ${Object.keys(seg).length>15?'15개':'전체'}</p>
+    ${barChart(rows,"원")}
+    <div class="table-wrap" style="margin-top:14px"><table>
+      <thead><tr><th>${isGFA?'연령/성별':'노출 위치'}</th><th>노출</th><th>클릭</th><th>비용</th><th>구매</th><th>구매매출</th><th>ROAS</th></tr></thead>
+      <tbody>${tableRows}</tbody>
+    </table></div>
+  </div>`;
 }
 
 function dailySection(key){
@@ -398,7 +416,8 @@ function campaignSection(key){
 }
 
 function metaExtraSection(key){
-  const acct = META_EXTRA[key];
+  const EXTRA_KEY_MAP = {"메타_협력광고":"meta_partner", "메타_외부링크":"meta_external"};
+  const acct = META_EXTRA[EXTRA_KEY_MAP[key] || key];
   if(!acct) return '';
   const devRows = acct.device.map(d=>({label:d.label, v:d.cost}));
   const genderRows = acct.gender.map(d=>({label:d.label, v:d.cost}));
