@@ -39,6 +39,7 @@ h1{font-size:21px; margin:0 0 3px;}
 .card .label{font-size:11.5px; color:var(--muted); margin-bottom:6px;}
 .card .value{font-size:19px; font-weight:700;}
 .card .delta{font-size:11.5px; margin-top:5px; font-weight:600; color:var(--muted);}
+.delta.up{color:var(--up);} .delta.down{color:var(--down);} .delta.flat{color:var(--muted);}
 table{width:100%; border-collapse:collapse; font-size:12.5px;}
 th,td{padding:8px 8px; text-align:right; border-bottom:1px solid var(--border); white-space:nowrap;}
 th:first-child,td:first-child{text-align:left;}
@@ -183,6 +184,53 @@ function getMetrics(mediaKey){
   return m.daily[currentDay] || null;
 }
 
+function getPrevPeriodInfo(){
+  if(currentLevel==='month'){
+    const idx = DATA.months.indexOf(currentMonth);
+    if(idx>0) return {type:'month', key:DATA.months[idx-1]};
+    return null;
+  }
+  if(currentLevel==='week'){
+    const weeks = DATA.weeks_by_month[currentMonth]||[];
+    const idx = weeks.indexOf(currentWeek);
+    if(idx>0) return {type:'week', month:currentMonth, week:weeks[idx-1]};
+    return null;
+  }
+  if(currentLevel==='day'){
+    const days = DATA.days_by_week[`${currentMonth}|${currentWeek}`]||[];
+    const idx = days.indexOf(currentDay);
+    if(idx>0) return {type:'day', day:days[idx-1]};
+    return null;
+  }
+  return null;
+}
+function getPrevMetrics(mediaKey){
+  const info = getPrevPeriodInfo();
+  if(!info) return null;
+  const m = DATA.media[mediaKey];
+  if(!m) return null;
+  if(info.type==='month') return m.monthly[info.key]||null;
+  if(info.type==='week') return m.weekly[`${info.month}|${info.week}`]||null;
+  if(info.type==='day') return m.daily[info.day]||null;
+  return null;
+}
+function prevLabel(){
+  if(currentLevel==='month') return '전월 대비';
+  if(currentLevel==='week') return '전주 대비';
+  return '전일 대비';
+}
+function deltaPct(cur, prev){
+  if(!prev) return null;
+  return Math.round((cur-prev)/prev*1000)/10;
+}
+function deltaBadge(cur, prev){
+  const p = deltaPct(cur, prev);
+  if(p===null) return `<span class="delta flat">${prevLabel()} 비교 데이터 없음</span>`;
+  const cls = p>0?'up':(p<0?'down':'flat');
+  const sign = p>0?'+':'';
+  return `<span class="delta ${cls}">${prevLabel()} ${sign}${p}%</span>`;
+}
+
 function barChart(rows, unit){
   const max = Math.max(...rows.map(r=>r.v||0), 1);
   return `<div class="chart-wrap">${rows.map(r=>`
@@ -235,26 +283,29 @@ function donutChart(items){
 }
 
 function overviewHTML(){
-  let totalCost=0, totalRev=0;
+  let totalCost=0, totalRev=0, prevTotalCost=0, prevTotalRev=0;
   const costRows=[], roasRows=[], cards=[];
   MEDIA_KEYS.forEach(k=>{
     const met = getMetrics(k);
+    const prev = getPrevMetrics(k);
     const cost = met?met.cost:0, revenue = met?met.revenue:0, roas = met?met.roas:0;
     totalCost += cost; totalRev += revenue;
+    if(prev){ prevTotalCost += prev.cost; prevTotalRev += prev.revenue; }
     costRows.push({label:CH_NAMES[k], v:cost});
     roasRows.push({label:CH_NAMES[k], v:roas});
     cards.push(`<div class="card" style="cursor:pointer" onclick="showTab('${k}')">
       <div class="label">${CH_NAMES[k]}</div>
       <div class="value">${met? roas+'%':'-'} <span style="font-size:10.5px;color:var(--muted);font-weight:400;">ROAS</span></div>
       <div class="delta">${periodLabel()} 광고비 ${met? fmt(cost)+'원':'데이터 없음'}</div>
+      ${met ? deltaBadge(cost, prev?prev.cost:null) : ''}
     </div>`);
   });
   return `
   <div class="panel"><h2>전체 채널 통합 요약 · ${periodLabel()}</h2>
     <p class="desc">메타(협력광고·외부링크) · 구글 · 네이버(SA·GFA) · 애드부스트 합산</p>
     <div class="grid2">
-      <div class="card"><div class="label">총 광고비</div><div class="value">${fmt(totalCost)}원</div></div>
-      <div class="card"><div class="label">총 구매전환매출</div><div class="value">${fmt(totalRev)}원</div></div>
+      <div class="card"><div class="label">총 광고비</div><div class="value">${fmt(totalCost)}원</div>${deltaBadge(totalCost, prevTotalCost)}</div>
+      <div class="card"><div class="label">총 구매전환매출</div><div class="value">${fmt(totalRev)}원</div>${deltaBadge(totalRev, prevTotalRev)}</div>
     </div>
   </div>
   <div class="grid3">
@@ -267,6 +318,7 @@ function overviewHTML(){
 
 function channelTableHTML(key){
   const met = getMetrics(key);
+  const prev = getPrevMetrics(key);
   const name = CH_NAMES[key];
   if(!met){
     return `<div class="panel"><h2>${name}</h2><p class="desc">선택한 기간(${periodLabel()})에는 데이터가 없습니다.</p></div>` + dailySection(key);
@@ -282,31 +334,33 @@ function channelTableHTML(key){
   ];
   const adjNote = (key==="네이버SA" && DATA.adjustments && DATA.adjustments["네이버SA"] && currentLevel==='month' && DATA.adjustments["네이버SA"]["월별_비용_보정"][currentMonth])
     ? `<div class="note">📌 ${DATA.adjustments["네이버SA"].note} (${currentMonth} +${fmt(DATA.adjustments["네이버SA"]["월별_비용_보정"][currentMonth])}원 반영됨)</div>` : '';
+  const deltaCards = `<div class="grid2" style="margin-top:14px">
+    <div class="card"><div class="label">비용 ${prevLabel()}</div>${deltaBadge(met.cost, prev?prev.cost:null)}</div>
+    <div class="card"><div class="label">구매매출 ${prevLabel()}</div>${deltaBadge(met.revenue, prev?prev.revenue:null)}</div>
+    <div class="card"><div class="label">ROAS ${prevLabel()}</div>${deltaBadge(met.roas, prev?prev.roas:null)}</div>
+  </div>`;
   return `<div class="panel">
     <h2>${name} · ${periodLabel()}</h2>
     <p class="desc">선택한 기간의 실적입니다. 상단에서 월별/주차(변환)별/일별로 바꿀 수 있어요.</p>
     <div class="table-wrap"><table><thead><tr><th>지표</th><th>${periodLabel()}</th></tr></thead><tbody>${rowsHtml}</tbody></table></div>
+    ${deltaCards}
     ${adjNote}
   </div>
   <div class="panel"><h2>${name} · 지표 비교 (${periodLabel()})</h2>${barChart(barRows,"")}</div>
   ${dailySection(key)}
-  ${campaignSection(key)}
-  ${key.startsWith('메타_') ? metaExtraSection(key) : ''}`;
+  ${campaignSection(key)}`;
 }
 
 function dailySection(key){
   const m = DATA.media[key];
   let days;
-  // scope days to current selection
   if(currentLevel==='week'){
     days = DATA.days_by_week[`${currentMonth}|${currentWeek}`] || [];
-  } else if(currentLevel==='day'){
-    days = [currentDay];
   } else {
-    days = Object.keys(m.daily).filter(d => {
-      // find if this date's month equals currentMonth via any week mapping
-      return Object.keys(DATA.days_by_week).some(k => k.startsWith(currentMonth+'|') && DATA.days_by_week[k].includes(d));
-    }).sort();
+    // month or day level: always show the FULL day-by-day list for the month (no drill-down to a single day)
+    days = Object.keys(DATA.days_by_week).filter(k => k.startsWith(currentMonth+'|'))
+      .flatMap(k => DATA.days_by_week[k]);
+    days = [...new Set(days)].sort();
   }
   const tableRows = days.map(d=>{
     const met = m.daily[d];
@@ -339,20 +393,28 @@ function metaExtraSection(key){
   const devRows = acct.device.map(d=>({label:d.label, v:d.cost}));
   const genderRows = acct.gender.map(d=>({label:d.label, v:d.cost}));
   const placeRows = acct.placement.map(d=>({label:d.label, v:d.cost}));
-  const top5table = (list, title, metricLabel, valueFn) => `
+  const top5table = (list, title) => `
     <div class="panel"><h2>${title} <span class="acct-badge">${acct.account_id}</span></h2>
     <p class="desc">Meta Ads MCP 실시간 조회 (전체 기간 누적)</p>
     <div class="table-wrap"><table><thead><tr><th>순위</th><th>소재명</th><th>노출</th><th>클릭</th><th>지출금액</th><th>구매</th><th>구매매출</th></tr></thead>
     <tbody>${list.map((c,i)=>`<tr><td>${i+1}</td><td>${c.name}</td><td class="num">${fmt(c.impr)}</td><td class="num">${fmt(c.clicks)}</td><td class="num">${fmt(c.cost)}원</td><td class="num">${fmt(c.purchase)}건</td><td class="num">${fmt(c.revenue)}원</td></tr>`).join('')}</tbody>
     </table></div></div>`;
   return `
-  <div class="panel"><h2>기기별 성과 <span class="acct-badge">${acct.account_id}</span></h2>${barChart(devRows,"원")}</div>
-  <div class="panel"><h2>성별 성과 <span class="acct-badge">${acct.account_id}</span></h2>${barChart(genderRows,"원")}</div>
-  <div class="panel"><h2>지면별 성과 <span class="acct-badge">${acct.account_id}</span></h2>${barChart(placeRows,"원")}</div>
-  ${top5table(acct.top5_purchase, '소재 성과 TOP5 · 구매 기준', '구매', c=>c.purchase)}
-  ${top5table(acct.top5_revenue, '소재 성과 TOP5 · 구매매출 기준', '매출', c=>c.revenue)}
-  ${top5table(acct.top5_clicks, '소재 성과 TOP5 · 클릭 기준', '클릭', c=>c.clicks)}
+  <div class="panel"><h2>${CH_NAMES[key]} · 기기별 성과 <span class="acct-badge">${acct.account_id}</span></h2>${barChart(devRows,"원")}</div>
+  <div class="panel"><h2>${CH_NAMES[key]} · 성별 성과 <span class="acct-badge">${acct.account_id}</span></h2>${barChart(genderRows,"원")}</div>
+  <div class="panel"><h2>${CH_NAMES[key]} · 지면별 성과 <span class="acct-badge">${acct.account_id}</span></h2>${barChart(placeRows,"원")}</div>
+  ${top5table(acct.top5_purchase, `${CH_NAMES[key]} · 소재 성과 TOP5 (구매 기준)`)}
+  ${top5table(acct.top5_revenue, `${CH_NAMES[key]} · 소재 성과 TOP5 (구매매출 기준)`)}
+  ${top5table(acct.top5_clicks, `${CH_NAMES[key]} · 소재 성과 TOP5 (클릭 기준)`)}
   `;
+}
+
+function top5PageHTML(){
+  return `<div class="panel"><h2>소재 성과 TOP5 · 기기/성별/지면 분석</h2>
+    <p class="desc">Meta Ads MCP로 실시간 조회한 협력광고·외부링크 두 계정의 소재/타겟 성과를 한 곳에서 볼 수 있어요.</p>
+  </div>
+  ${metaExtraSection('메타_협력광고')}
+  ${metaExtraSection('메타_외부링크')}`;
 }
 
 const TABS = [
@@ -363,6 +425,7 @@ const TABS = [
   {key:"네이버SA", label:"네이버 SA", group:"매체별 리포트"},
   {key:"네이버GFA", label:"네이버 GFA", group:"매체별 리포트"},
   {key:"애드부스트", label:"애드부스트", group:"매체별 리포트"},
+  {key:"top5", label:"소재 성과 TOP5", group:"소재 분석"},
 ];
 
 function render(){
@@ -376,9 +439,10 @@ function render(){
 function renderApp(){
   const app = document.getElementById('app');
   let content = `<section class="tab active" id="tab-overview">${overviewHTML()}</section>`;
-  TABS.filter(t=>t.key!=="overview").forEach(t=>{
+  TABS.filter(t=>t.key!=="overview" && t.key!=="top5").forEach(t=>{
     content += `<section class="tab" id="tab-${t.key}">${channelTableHTML(t.key)}</section>`;
   });
+  content += `<section class="tab" id="tab-top5">${top5PageHTML()}</section>`;
   content += `<footer>DAYS ON 통합 광고 성과 대시보드 · 데이터 출처: 광고주 제공 원본 raw 시트(메타/네이버/구글/애드부스트) 집계 및 Meta Ads MCP 실시간 조회 · 이 페이지는 정적 데이터(data.json) 기준이며, 최신화하려면 raw 데이터를 갱신한 뒤 data.json을 다시 생성해 커밋하세요.</footer>`;
   app.innerHTML = content;
   showTab(activeTab);
