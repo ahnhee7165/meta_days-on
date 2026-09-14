@@ -120,7 +120,7 @@ let DATA = null, META_EXTRA = null;
 let currentLevel = "month";
 let currentMonth = null, currentWeek = null, currentDay = null;
 let activeTab = "overview";
-let UPLOADED_FILES = [];
+let UPLOADED_FILES = {};
 let UPLOAD_ROWS_ADDED = 0;
 let UPLOAD_ERRORS = [];
 
@@ -141,20 +141,69 @@ function monthBoundedWeek(dateStr){
   return {month, week_label:`${d.getMonth()+1}월 ${weekNum}주차`};
 }
 
-function parseCSV(text){
+function parseCSVRaw(text){
   const lines = text.split(/\r?\n/).filter(l=>l.trim().length>0);
-  if(lines.length<2) return [];
-  const header = lines[0].split(',').map(s=>s.trim().replace(/^"|"$/g,''));
-  return lines.slice(1).map(line=>{
-    const cells = line.split(',').map(s=>s.trim().replace(/^"|"$/g,''));
-    const obj={};
-    header.forEach((h,i)=> obj[h]=cells[i]);
-    return obj;
-  });
+  if(lines.length<2) return {header:[], rows:[]};
+  const splitLine = l => l.split(',').map(s=>s.trim().replace(/^"|"$/g,''));
+  const header = splitLine(lines[0]);
+  const rows = lines.slice(1).map(splitLine);
+  return {header, rows};
+}
+function col(header, name){ return header.indexOf(name); } // indexOf = 첫 번째로 일치하는 컬럼 (구글의 중복 '일' 컬럼도 이걸로 안전하게 첫 번째 것을 씀)
+function num(v){ if(v===undefined||v===null) return 0; const s=String(v).replace(/,/g,'').trim(); if(s===''||s==='-') return 0; const n=parseFloat(s); return isNaN(n)?0:n; }
+function normDate(v){
+  if(!v) return '';
+  v = v.trim();
+  if(/^\d{4}-\d{2}-\d{2}/.test(v)) return v.slice(0,10);
+  const m = v.match(/^(\d{4})\.(\d{1,2})\.(\d{1,2})\.?$/); // 2026.08.07. 형식
+  if(m) return `${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;
+  const d = new Date(v);
+  if(!isNaN(d)) return d.toISOString().slice(0,10);
+  return '';
 }
 
-function emptyBucket(){ return {impr:0,clicks:0,cost:0,purchase:0,revenue:0,reach:0,cart:0,cart_revenue:0,total_conv:0,total_conv_revenue:0}; }
+// 매체별 raw 시트와 동일한 컬럼 구조를 그대로 해석하기 위한 설정
+const MEDIA_PARSERS = {
+  "네이버SA": {dateCol:"일별", campaignCol:"캠페인", campaignTypeCol:"캠페인유형", imprCol:"노출수", clicksCol:"클릭수", costCol:"총비용", purchaseCol:"구매완료 전환수", revenueCol:"구매완료 전환매출액(원)"},
+  "구글": {dateCol:"일", campaignCol:"캠페인", imprCol:"노출수", clicksCol:"클릭수", costCol:"비용", purchaseCol:"전환", revenueCol:"전환 가치"},
+  "네이버GFA": {dateCol:"기간", campaignCol:"캠페인 이름", imprCol:"노출수", clicksCol:"클릭수", costCol:"총비용", purchaseCol:"구매완료 수", revenueCol:"구매완료 전환매출액", cartCol:"장바구니 담기 수", cartRevenueCol:"장바구니 전환매출액", segmentCol:"연령 및 성별"},
+  "애드부스트": {dateCol:"기간", campaignCol:"상품명", imprCol:"노출수", clicksCol:"클릭수", costCol:"총비용", purchaseCol:"구매완료 수", revenueCol:"구매완료 전환매출액", cartCol:"장바구니 담기 수", cartRevenueCol:"장바구니 전환매출액"},
+  "메타_협력광고": {dateCol:"일", campaignCol:"캠페인 이름", imprCol:"노출", clicksCol:"링크 클릭", costCol:"지출 금액 (KRW)", purchaseCol:"공유 항목이 포함된 구매", revenueCol:"공유 항목의 구매 전환값", reachCol:"도달", cartCol:"공유 항목이 포함된 장바구니에 담기", cartRevenueCol:"공유 항목의 장바구니에 담기 전환값", segmentCol:"노출 위치"},
+  "메타_외부링크": {dateCol:"일", campaignCol:"캠페인 이름", imprCol:"노출", clicksCol:"링크 클릭", costCol:"지출 금액 (KRW)", purchaseCol:"구매", revenueCol:"구매 전환값", reachCol:"도달", cartCol:"장바구니에 담기", cartRevenueCol:"장바구니에 담기 전환값", segmentCol:"노출 위치"},
+};
+
+function parseMediaCSV(media, text){
+  const cfg = MEDIA_PARSERS[media];
+  if(!cfg) return [];
+  const {header, rows} = parseCSVRaw(text);
+  const idx = {};
+  for(const key in cfg){ idx[key] = col(header, cfg[key]); }
+  const out = [];
+  for(const r of rows){
+    const date = normDate(idx.dateCol>=0 ? r[idx.dateCol] : '');
+    if(!date) continue;
+    out.push({
+      date,
+      campaign: idx.campaignCol>=0 ? r[idx.campaignCol] : '',
+      campaign_type: idx.campaignTypeCol>=0 ? r[idx.campaignTypeCol] : '',
+      segment: idx.segmentCol>=0 ? r[idx.segmentCol] : '',
+      impr: idx.imprCol>=0 ? num(r[idx.imprCol]) : 0,
+      clicks: idx.clicksCol>=0 ? num(r[idx.clicksCol]) : 0,
+      cost: idx.costCol>=0 ? num(r[idx.costCol]) : 0,
+      purchase: idx.purchaseCol>=0 ? num(r[idx.purchaseCol]) : 0,
+      revenue: idx.revenueCol>=0 ? num(r[idx.revenueCol]) : 0,
+      reach: idx.reachCol>=0 ? num(r[idx.reachCol]) : 0,
+      cart: idx.cartCol>=0 ? num(r[idx.cartCol]) : 0,
+      cart_revenue: idx.cartRevenueCol>=0 ? num(r[idx.cartRevenueCol]) : 0,
+    });
+  }
+  return out;
+}
+
+function emptyBucket(){ return {impr:0,clicks:0,cost:0,purchase:0,revenue:0,reach:0,cart:0,cart_revenue:0}; }
 function recomputeMetrics(b){
+  b.total_conv = +(b.purchase + b.cart).toFixed(1);
+  b.total_conv_revenue = +(b.revenue + b.cart_revenue).toFixed(1);
   b.ctr = b.impr? +(b.clicks/b.impr*100).toFixed(2):0;
   b.cpc = b.clicks? +(b.cost/b.clicks).toFixed(1):0;
   b.cpm = b.impr? +(b.cost/b.impr*1000).toFixed(1):0;
@@ -170,37 +219,50 @@ function addToBucket(bucketObj, key, nums){
   recomputeMetrics(b);
 }
 
-function mergeUploadedRow(row){
-  const media = (row['매체']||'').trim();
-  const date = (row['날짜']||'').trim();
-  if(!DATA.media[media] || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return false;
-  const {month, week_label} = monthBoundedWeek(date);
-  const nums = {
-    impr: parseFloat(row['노출'])||0, reach: parseFloat(row['도달'])||0, clicks: parseFloat(row['클릭'])||0,
-    cost: parseFloat(row['비용'])||0, purchase: parseFloat(row['구매'])||0, revenue: parseFloat(row['구매매출'])||0,
-    cart: parseFloat(row['장바구니담기'])||0, cart_revenue: parseFloat(row['장바구니매출'])||0
-  };
+function mergeParsedRow(media, row){
+  if(!DATA.media[media] || !row.date) return false;
+  const {month, week_label} = monthBoundedWeek(row.date);
+  const nums = {impr:row.impr, clicks:row.clicks, cost:row.cost, purchase:row.purchase, revenue:row.revenue, reach:row.reach, cart:row.cart, cart_revenue:row.cart_revenue};
   const m = DATA.media[media];
-  addToBucket(m.daily, date, nums);
-  addToBucket(m.weekly, `${month}|${week_label}`, nums);
+  addToBucket(m.daily, row.date, nums);
+  const wkKey = `${month}|${week_label}`;
+  addToBucket(m.weekly, wkKey, nums);
   addToBucket(m.monthly, month, nums);
-  if(row['캠페인']){
-    addToBucket(m.campaign, row['캠페인'], nums);
+  if(row.campaign){
+    addToBucket(m.campaign, row.campaign, nums);
     if(!m.campaign_by_month) m.campaign_by_month = {};
     if(!m.campaign_by_month[month]) m.campaign_by_month[month] = {};
-    addToBucket(m.campaign_by_month[month], row['캠페인'], nums);
+    addToBucket(m.campaign_by_month[month], row.campaign, nums);
     if(!m.campaign_by_week) m.campaign_by_week = {};
-    const wkKey = `${month}|${week_label}`;
     if(!m.campaign_by_week[wkKey]) m.campaign_by_week[wkKey] = {};
-    addToBucket(m.campaign_by_week[wkKey], row['캠페인'], nums);
+    addToBucket(m.campaign_by_week[wkKey], row.campaign, nums);
+  }
+  if(row.segment){
+    if(!m.segment) m.segment = {};
+    addToBucket(m.segment, row.segment, nums);
+    if(!m.segment_by_month) m.segment_by_month = {};
+    if(!m.segment_by_month[month]) m.segment_by_month[month] = {};
+    addToBucket(m.segment_by_month[month], row.segment, nums);
+    if(!m.segment_by_week) m.segment_by_week = {};
+    if(!m.segment_by_week[wkKey]) m.segment_by_week[wkKey] = {};
+    addToBucket(m.segment_by_week[wkKey], row.segment, nums);
+  }
+  if(media==="네이버SA" && row.campaign_type){
+    if(!m.campaign_type) m.campaign_type = {};
+    addToBucket(m.campaign_type, row.campaign_type, nums);
+    if(!m.campaign_type_by_month) m.campaign_type_by_month = {};
+    if(!m.campaign_type_by_month[month]) m.campaign_type_by_month[month] = {};
+    addToBucket(m.campaign_type_by_month[month], row.campaign_type, nums);
+    if(!m.campaign_type_by_week) m.campaign_type_by_week = {};
+    if(!m.campaign_type_by_week[wkKey]) m.campaign_type_by_week[wkKey] = {};
+    addToBucket(m.campaign_type_by_week[wkKey], row.campaign_type, nums);
   }
 
   if(!DATA.months.includes(month)) DATA.months.push(month);
   if(!DATA.weeks_by_month[month]) DATA.weeks_by_month[month] = [];
   if(!DATA.weeks_by_month[month].includes(week_label)) DATA.weeks_by_month[month].push(week_label);
-  const wk = `${month}|${week_label}`;
-  if(!DATA.days_by_week[wk]) DATA.days_by_week[wk] = [];
-  if(!DATA.days_by_week[wk].includes(date)) DATA.days_by_week[wk].push(date);
+  if(!DATA.days_by_week[wkKey]) DATA.days_by_week[wkKey] = [];
+  if(!DATA.days_by_week[wkKey].includes(row.date)) DATA.days_by_week[wkKey].push(row.date);
   return true;
 }
 
@@ -216,9 +278,9 @@ function resortCalendar(){
   for(const k in DATA.days_by_week){ DATA.days_by_week[k].sort(); }
 }
 
-async function fetchRawUploads(){
+async function fetchFolder(path){
   try{
-    const res = await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${UPLOAD_DIR}`);
+    const res = await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${path}`);
     if(!res.ok) return [];
     const list = await res.json();
     return Array.isArray(list) ? list.filter(f=>f.type==='file' && f.name.toLowerCase().endsWith('.csv')) : [];
@@ -226,18 +288,20 @@ async function fetchRawUploads(){
 }
 
 async function loadUploadedReports(){
-  UPLOADED_FILES = await fetchRawUploads();
-  UPLOAD_ROWS_ADDED = 0; UPLOAD_ERRORS = [];
-  for(const f of UPLOADED_FILES){
-    try{
-      const text = await fetch(f.download_url).then(r=>r.text());
-      const rows = parseCSV(text);
-      let added = 0;
-      rows.forEach(r=>{ if(mergeUploadedRow(r)) added++; });
-      UPLOAD_ROWS_ADDED += added;
-      if(added < rows.length) UPLOAD_ERRORS.push(`${f.name}: ${rows.length-added}행은 형식이 안 맞아 건너뜀`);
-    }catch(e){
-      UPLOAD_ERRORS.push(`${f.name}: 불러오기 실패`);
+  UPLOADED_FILES = {}; UPLOAD_ROWS_ADDED = 0; UPLOAD_ERRORS = [];
+  for(const media of MEDIA_KEYS){
+    const files = await fetchFolder(`${UPLOAD_DIR}/${media}`);
+    UPLOADED_FILES[media] = files;
+    for(const f of files){
+      try{
+        const text = await fetch(f.download_url).then(r=>r.text());
+        const parsedRows = parseMediaCSV(media, text);
+        let added = 0;
+        parsedRows.forEach(r=>{ if(mergeParsedRow(media, r)) added++; });
+        UPLOAD_ROWS_ADDED += added;
+      }catch(e){
+        UPLOAD_ERRORS.push(`${media}/${f.name}: 불러오기 실패`);
+      }
     }
   }
   resortCalendar();
@@ -454,7 +518,7 @@ function channelTableHTML(key){
     return `<div class="panel"><h2>${name}</h2><p class="desc">선택한 기간(${periodLabel()})에는 데이터가 없습니다.</p></div>` + dailySection(key);
   }
   const rowDefs = [
-    ["노출", met.impr], ["도달", met.reach], ["클릭", met.clicks], ["비용", met.cost],
+    ["노출", met.impr], ["클릭", met.clicks], ["비용", met.cost],
     ["구매", met.purchase], ["구매매출", met.revenue],
     ["총전환수", met.total_conv], ["총전환매출액", met.total_conv_revenue],
     ["장바구니담기", met.cart], ["장바구니매출", met.cart_revenue],
@@ -624,37 +688,38 @@ function top5PageHTML(){
 }
 
 function uploadPageHTML(){
-  const uploadUrl = `https://github.com/${GH_OWNER}/${GH_REPO}/upload/${GH_BRANCH}/${UPLOAD_DIR}`;
-  const fileRows = UPLOADED_FILES.map(f=>`<tr>
-      <td>${f.name}</td>
-      <td class="num">${(f.size/1024).toFixed(1)} KB</td>
-      <td class="num"><a href="${f.html_url}" target="_blank" rel="noopener">보기/삭제</a></td>
-    </tr>`).join('');
+  const totalFiles = MEDIA_KEYS.reduce((s,m)=> s + (UPLOADED_FILES[m]?UPLOADED_FILES[m].length:0), 0);
   const errBlock = UPLOAD_ERRORS.length ? `<div class="note">⚠️ ${UPLOAD_ERRORS.join(' · ')}</div>` : '';
+
+  const mediaBlocks = MEDIA_KEYS.map(media=>{
+    const cfg = MEDIA_PARSERS[media];
+    const files = UPLOADED_FILES[media] || [];
+    const uploadUrl = `https://github.com/${GH_OWNER}/${GH_REPO}/upload/${GH_BRANCH}/${UPLOAD_DIR}/${media}`;
+    const cols = ["dateCol","campaignCol","campaignTypeCol","imprCol","clicksCol","costCol","purchaseCol","revenueCol","reachCol","cartCol","cartRevenueCol","segmentCol"]
+      .filter(k=>cfg[k]).map(k=>cfg[k]);
+    const fileRows = files.map(f=>`<tr>
+        <td>${f.name}</td>
+        <td class="num">${(f.size/1024).toFixed(1)} KB</td>
+        <td class="num"><a href="${f.html_url}" target="_blank" rel="noopener">보기/삭제</a></td>
+      </tr>`).join('');
+    return `<div class="panel">
+      <h2>${CH_NAMES[media]} <span class="acct-badge">${files.length}개 파일</span></h2>
+      <p class="desc">구글시트 "${media}" 탭을 그대로 CSV로 내보내서 올리면 돼요. 필요한 컬럼: <b>${cols.join(', ')}</b> (다른 컬럼이 더 있어도 무시하고 알아서 읽어요)</p>
+      <a href="${uploadUrl}" target="_blank" rel="noopener" style="display:inline-block; background:var(--accent); color:#fff; padding:8px 16px; border-radius:8px; font-weight:700; font-size:12.5px; text-decoration:none;">+ ${CH_NAMES[media]} raw CSV 업로드</a>
+      ${files.length ? `<div class="table-wrap" style="margin-top:12px"><table><thead><tr><th>파일명</th><th>크기</th><th>관리</th></tr></thead><tbody>${fileRows}</tbody></table></div>` : `<p class="desc" style="margin-top:8px">아직 업로드된 파일 없음</p>`}
+    </div>`;
+  }).join('');
+
   return `
   <div class="panel">
     <h2>보고서 업로드</h2>
-    <p class="desc">raw 데이터 CSV를 깃허브 <code>${UPLOAD_DIR}/</code> 폴더에 올리면, 페이지를 열 때마다 자동으로 전부 합쳐서(누적) 대시보드에 반영돼요. data.json은 그대로 두고, 새 CSV만 계속 추가하시면 됩니다.</p>
-    <a href="${uploadUrl}" target="_blank" rel="noopener" style="display:inline-block; background:var(--accent); color:#fff; padding:10px 18px; border-radius:8px; font-weight:700; font-size:13px; text-decoration:none;">+ 새 raw 데이터 CSV 업로드하기 (깃허브로 이동)</a>
-    <div class="note">📌 이 버튼을 누르면 깃허브 업로드 화면으로 바로 이동해요. 파일 올리고 <b>Commit changes</b>까지 누르셔야 반영됩니다.</div>
-  </div>
-
-  <div class="panel">
-    <h2>CSV 형식</h2>
-    <p class="desc">첫 줄은 아래 헤더 그대로, 그 아래에 데이터를 한 줄씩 추가하세요. 매체명은 반드시 다음 중 하나와 똑같이 써주세요: 네이버SA / 구글 / 네이버GFA / 애드부스트 / 메타_협력광고 / 메타_외부링크</p>
-    <div class="table-wrap"><table>
-      <thead><tr><th>날짜</th><th>매체</th><th>캠페인</th><th>노출</th><th>도달</th><th>클릭</th><th>비용</th><th>구매</th><th>구매매출</th><th>장바구니담기</th><th>장바구니매출</th></tr></thead>
-      <tbody><tr><td>2026-09-10</td><td>네이버SA</td><td>캠페인명</td><td>10000</td><td>0</td><td>200</td><td>150000</td><td>5</td><td>250000</td><td>2</td><td>40000</td></tr></tbody>
-    </table></div>
-    <p class="desc" style="margin-top:10px">날짜는 <b>YYYY-MM-DD</b> 형식이어야 해요. 월/주차(변환)는 구글시트에 걸어두신 것과 동일한 로직(월 경계마다 리셋, 금요일 시작)으로 이 페이지가 자동 계산합니다.</p>
-  </div>
-
-  <div class="panel">
-    <h2>현재 누적된 업로드 파일 (${UPLOADED_FILES.length}개)</h2>
-    <p class="desc">${UPLOADED_FILES.length ? `총 ${fmt(UPLOAD_ROWS_ADDED)}행이 대시보드 집계에 추가 반영됐어요.` : `아직 업로드된 raw 파일이 없어요. 기본 데이터(data.json)만 표시 중입니다.`}</p>
-    ${UPLOADED_FILES.length ? `<div class="table-wrap"><table><thead><tr><th>파일명</th><th>크기</th><th>관리</th></tr></thead><tbody>${fileRows}</tbody></table></div>` : ''}
+    <p class="desc">매체별로 raw CSV를 깃허브 <code>${UPLOAD_DIR}/&lt;매체&gt;/</code> 폴더에 올리면, 페이지를 열 때마다 자동으로 전부 합쳐서(누적) 대시보드에 반영돼요. 컬럼 구조는 구글시트 각 매체 탭의 원본 export 그대로 쓰면 됩니다 — 날짜는 이 페이지가 알아서 인식해서(YYYY-MM-DD, YYYY.MM.DD. 둘 다 가능) 월/주차(변환)를 자동 계산해요.</p>
+    <p class="desc">현재 총 <b>${totalFiles}개</b> 파일에서 <b>${fmt(UPLOAD_ROWS_ADDED)}행</b>이 추가 반영됐어요.</p>
     ${errBlock}
-    <div class="note">📌 잘못 올린 파일은 위 표의 "보기/삭제" 링크로 들어가서, 깃허브 파일 화면의 "..." 메뉴 → Delete file → Commit changes 하시면 바로 집계에서 빠져요.</div>
+  </div>
+  ${mediaBlocks}
+  <div class="panel">
+    <div class="note">📌 잘못 올린 파일은 각 매체 카드의 "보기/삭제" 링크로 들어가서, 깃허브 파일 화면의 "..." 메뉴 → Delete file → Commit changes 하시면 바로 집계에서 빠져요.</div>
   </div>`;
 }
 
