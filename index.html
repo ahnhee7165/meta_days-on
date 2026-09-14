@@ -113,14 +113,135 @@ const CH_NAMES = {
   메타_협력광고:"META 협력광고", 메타_외부링크:"META 외부링크"
 };
 const MEDIA_KEYS = ["메타_협력광고","메타_외부링크","구글","네이버SA","네이버GFA","애드부스트"];
+const GH_OWNER = "ahnhee7165", GH_REPO = "meta_days-on", GH_BRANCH = "main", UPLOAD_DIR = "raw-uploads";
+const MONTH_ORDER = Array.from({length:12},(_,i)=>`${i+1}월`);
 
 let DATA = null, META_EXTRA = null;
 let currentLevel = "month";
 let currentMonth = null, currentWeek = null, currentDay = null;
 let activeTab = "overview";
+let UPLOADED_FILES = [];
+let UPLOAD_ROWS_ADDED = 0;
+let UPLOAD_ERRORS = [];
 
 function fmt(n){ if(n===null||n===undefined) return "-"; if(typeof n==="string") return n; return Math.round(n).toLocaleString('ko-KR'); }
 function pct(n){ if(n===null||n===undefined) return "-"; return n+"%"; }
+
+// ---- 업로드된 raw CSV를 위한 날짜 -> 월/주차(변환) 변환 (구글시트와 동일한 "월 경계마다 리셋" 로직) ----
+function monthBoundedWeek(dateStr){
+  const d = new Date(dateStr+"T00:00:00");
+  const monthStart = new Date(d.getFullYear(), d.getMonth(), 1);
+  const msWeekday = (monthStart.getDay()+6)%7; // Mon=0..Sun=6
+  const daysToFri = (4 - msWeekday + 7) % 7;
+  const firstFriday = new Date(monthStart); firstFriday.setDate(monthStart.getDate()+daysToFri);
+  let weekNum;
+  if(d < firstFriday) weekNum = 1;
+  else weekNum = 2 + Math.floor((d - firstFriday)/(7*86400000));
+  const month = `${d.getMonth()+1}월`;
+  return {month, week_label:`${d.getMonth()+1}월 ${weekNum}주차`};
+}
+
+function parseCSV(text){
+  const lines = text.split(/\r?\n/).filter(l=>l.trim().length>0);
+  if(lines.length<2) return [];
+  const header = lines[0].split(',').map(s=>s.trim().replace(/^"|"$/g,''));
+  return lines.slice(1).map(line=>{
+    const cells = line.split(',').map(s=>s.trim().replace(/^"|"$/g,''));
+    const obj={};
+    header.forEach((h,i)=> obj[h]=cells[i]);
+    return obj;
+  });
+}
+
+function emptyBucket(){ return {impr:0,clicks:0,cost:0,purchase:0,revenue:0,reach:0,cart:0,cart_revenue:0,total_conv:0,total_conv_revenue:0}; }
+function recomputeMetrics(b){
+  b.ctr = b.impr? +(b.clicks/b.impr*100).toFixed(2):0;
+  b.cpc = b.clicks? +(b.cost/b.clicks).toFixed(1):0;
+  b.cpm = b.impr? +(b.cost/b.impr*1000).toFixed(1):0;
+  b.cpa = b.purchase? +(b.cost/b.purchase).toFixed(1):0;
+  b.roas = b.cost? +(b.revenue/b.cost*100).toFixed(1):0;
+  b.aov = b.purchase? +(b.revenue/b.purchase).toFixed(1):0;
+  b.cvr = b.clicks? +(b.purchase/b.clicks*100).toFixed(2):0;
+}
+function addToBucket(bucketObj, key, nums){
+  if(!bucketObj[key]) bucketObj[key] = emptyBucket();
+  const b = bucketObj[key];
+  for(const f in nums){ b[f] = (b[f]||0) + (nums[f]||0); }
+  recomputeMetrics(b);
+}
+
+function mergeUploadedRow(row){
+  const media = (row['매체']||'').trim();
+  const date = (row['날짜']||'').trim();
+  if(!DATA.media[media] || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return false;
+  const {month, week_label} = monthBoundedWeek(date);
+  const nums = {
+    impr: parseFloat(row['노출'])||0, reach: parseFloat(row['도달'])||0, clicks: parseFloat(row['클릭'])||0,
+    cost: parseFloat(row['비용'])||0, purchase: parseFloat(row['구매'])||0, revenue: parseFloat(row['구매매출'])||0,
+    cart: parseFloat(row['장바구니담기'])||0, cart_revenue: parseFloat(row['장바구니매출'])||0
+  };
+  const m = DATA.media[media];
+  addToBucket(m.daily, date, nums);
+  addToBucket(m.weekly, `${month}|${week_label}`, nums);
+  addToBucket(m.monthly, month, nums);
+  if(row['캠페인']){
+    addToBucket(m.campaign, row['캠페인'], nums);
+    if(!m.campaign_by_month) m.campaign_by_month = {};
+    if(!m.campaign_by_month[month]) m.campaign_by_month[month] = {};
+    addToBucket(m.campaign_by_month[month], row['캠페인'], nums);
+    if(!m.campaign_by_week) m.campaign_by_week = {};
+    const wkKey = `${month}|${week_label}`;
+    if(!m.campaign_by_week[wkKey]) m.campaign_by_week[wkKey] = {};
+    addToBucket(m.campaign_by_week[wkKey], row['캠페인'], nums);
+  }
+
+  if(!DATA.months.includes(month)) DATA.months.push(month);
+  if(!DATA.weeks_by_month[month]) DATA.weeks_by_month[month] = [];
+  if(!DATA.weeks_by_month[month].includes(week_label)) DATA.weeks_by_month[month].push(week_label);
+  const wk = `${month}|${week_label}`;
+  if(!DATA.days_by_week[wk]) DATA.days_by_week[wk] = [];
+  if(!DATA.days_by_week[wk].includes(date)) DATA.days_by_week[wk].push(date);
+  return true;
+}
+
+function resortCalendar(){
+  DATA.months.sort((a,b)=>MONTH_ORDER.indexOf(a)-MONTH_ORDER.indexOf(b));
+  for(const mo in DATA.weeks_by_month){
+    DATA.weeks_by_month[mo].sort((a,b)=>{
+      const na = parseInt((a.match(/(\d+)주차/)||[0,99])[1]);
+      const nb = parseInt((b.match(/(\d+)주차/)||[0,99])[1]);
+      return na-nb;
+    });
+  }
+  for(const k in DATA.days_by_week){ DATA.days_by_week[k].sort(); }
+}
+
+async function fetchRawUploads(){
+  try{
+    const res = await fetch(`https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${UPLOAD_DIR}`);
+    if(!res.ok) return [];
+    const list = await res.json();
+    return Array.isArray(list) ? list.filter(f=>f.type==='file' && f.name.toLowerCase().endsWith('.csv')) : [];
+  }catch(e){ return []; }
+}
+
+async function loadUploadedReports(){
+  UPLOADED_FILES = await fetchRawUploads();
+  UPLOAD_ROWS_ADDED = 0; UPLOAD_ERRORS = [];
+  for(const f of UPLOADED_FILES){
+    try{
+      const text = await fetch(f.download_url).then(r=>r.text());
+      const rows = parseCSV(text);
+      let added = 0;
+      rows.forEach(r=>{ if(mergeUploadedRow(r)) added++; });
+      UPLOAD_ROWS_ADDED += added;
+      if(added < rows.length) UPLOAD_ERRORS.push(`${f.name}: ${rows.length-added}행은 형식이 안 맞아 건너뜀`);
+    }catch(e){
+      UPLOAD_ERRORS.push(`${f.name}: 불러오기 실패`);
+    }
+  }
+  resortCalendar();
+}
 
 async function boot(){
   const [d, m] = await Promise.all([
@@ -128,6 +249,7 @@ async function boot(){
     fetch('meta_extra.json').then(r=>r.json())
   ]);
   DATA = d; META_EXTRA = m;
+  await loadUploadedReports();
   currentMonth = DATA.months[DATA.months.length-1] || DATA.months[0];
   document.getElementById('dataRangeLabel').textContent = `${DATA.months[0]} ~ ${DATA.months[DATA.months.length-1]}`;
   buildMonthSelect();
@@ -359,18 +481,29 @@ function channelTableHTML(key){
   <div class="panel"><h2>${name} · 지표 비교 (${periodLabel()})</h2>${barChart(barRows,"")}</div>
   ${dailySection(key)}
   ${campaignSection(key)}
-  ${segmentSection(key)}`;
+  ${segmentSection(key)}
+  ${key==="네이버SA" ? campaignTypeSection(key) : ''}`;
 }
 
 function segmentSection(key){
-  const seg = DATA.media[key].segment;
-  if(!seg || Object.keys(seg).length===0) return '';
+  const m = DATA.media[key];
   const isGFA = key === "네이버GFA";
   const title = isGFA ? "연령 및 성별 분석" : "노출 위치별 분석";
-  const rows = Object.entries(seg).slice(0,15).map(([label,v])=>({label, v:v.cost}));
-  const tableRows = Object.entries(seg).slice(0,15).map(([label,v])=>`<tr><td>${label}</td><td class="num">${fmt(v.impr)}</td><td class="num">${fmt(v.clicks)}</td><td class="num">${fmt(v.cost)}원</td><td class="num">${fmt(v.purchase)}건</td><td class="num">${fmt(v.revenue)}원</td><td class="num">${v.roas}%</td></tr>`).join('');
-  return `<div class="panel"><h2>${CH_NAMES[key]} · ${title}</h2>
-    <p class="desc">전체 기간 누적 기준, 비용 상위 ${Object.keys(seg).length>15?'15개':'전체'}</p>
+  let seg, scopeLabel;
+  if(currentLevel==='month'){
+    seg = (m.segment_by_month||{})[currentMonth] || {};
+    scopeLabel = currentMonth;
+  } else {
+    const wk = `${currentMonth}|${currentWeek}`;
+    seg = (m.segment_by_week||{})[wk] || {};
+    scopeLabel = currentWeek;
+  }
+  const entries = Object.entries(seg).sort((a,b)=>b[1].cost-a[1].cost).slice(0,15);
+  if(entries.length===0) return `<div class="panel"><h2>${CH_NAMES[key]} · ${title} · ${scopeLabel}</h2><p class="desc">선택한 기간(${scopeLabel})에는 데이터가 없습니다.</p></div>`;
+  const rows = entries.map(([label,v])=>({label, v:v.cost}));
+  const tableRows = entries.map(([label,v])=>`<tr><td>${label}</td><td class="num">${fmt(v.impr)}</td><td class="num">${fmt(v.clicks)}</td><td class="num">${fmt(v.cost)}원</td><td class="num">${fmt(v.purchase)}건</td><td class="num">${fmt(v.revenue)}원</td><td class="num">${v.roas}%</td></tr>`).join('');
+  return `<div class="panel"><h2>${CH_NAMES[key]} · ${title} · ${scopeLabel}</h2>
+    <p class="desc">선택한 기간(${scopeLabel}) 기준, 비용 상위 ${entries.length>=15?'15개':entries.length+'개'} — 상단 기간 드롭다운에 반응합니다.</p>
     ${barChart(rows,"원")}
     <div class="table-wrap" style="margin-top:14px"><table>
       <thead><tr><th>${isGFA?'연령/성별':'노출 위치'}</th><th>노출</th><th>클릭</th><th>비용</th><th>구매</th><th>구매매출</th><th>ROAS</th></tr></thead>
@@ -406,12 +539,48 @@ function dailySection(key){
 }
 
 function campaignSection(key){
-  const list = Object.entries(DATA.media[key].campaign || {});
-  if(list.length===0) return '';
-  const rows = list.slice(0,10).map(([name,c],i)=>`<tr><td><span class="rankbadge">${i+1}</span>${name}</td><td class="num">${fmt(c.impr)}</td><td class="num">${fmt(c.clicks)}</td><td class="num">${fmt(c.cost)}원</td><td class="num">${fmt(c.purchase)}건</td><td class="num">${fmt(c.revenue)}원</td><td class="num">${c.roas}%</td></tr>`).join('');
-  return `<div class="panel"><h2>캠페인별 성과 (구매전환매출 상위)</h2>
-    <p class="desc">전체 기간 누적 기준, 매출 상위 캠페인</p>
+  const m = DATA.media[key];
+  let list, scopeLabel;
+  if(currentLevel==='month'){
+    list = Object.entries((m.campaign_by_month||{})[currentMonth] || {});
+    scopeLabel = currentMonth;
+  } else {
+    const wk = `${currentMonth}|${currentWeek}`;
+    list = Object.entries((m.campaign_by_week||{})[wk] || {});
+    scopeLabel = currentWeek;
+  }
+  if(list.length===0) return `<div class="panel"><h2>캠페인별 성과 · ${scopeLabel}</h2><p class="desc">선택한 기간(${scopeLabel})에는 데이터가 없습니다.</p></div>`;
+  list = list.sort((a,b)=>b[1].revenue-a[1].revenue).slice(0,10);
+  const rows = list.map(([name,c],i)=>`<tr><td><span class="rankbadge">${i+1}</span>${name}</td><td class="num">${fmt(c.impr)}</td><td class="num">${fmt(c.clicks)}</td><td class="num">${fmt(c.cost)}원</td><td class="num">${fmt(c.purchase)}건</td><td class="num">${fmt(c.revenue)}원</td><td class="num">${c.roas}%</td></tr>`).join('');
+  return `<div class="panel"><h2>캠페인별 성과 (구매전환매출 상위) · ${scopeLabel}</h2>
+    <p class="desc">선택한 기간(${scopeLabel}) 기준, 매출 상위 캠페인 — 상단 기간 드롭다운을 바꾸면 이 표도 같이 바뀝니다.</p>
     <div class="table-wrap"><table><thead><tr><th>캠페인</th><th>노출</th><th>클릭</th><th>비용</th><th>구매</th><th>구매매출</th><th>ROAS</th></tr></thead><tbody>${rows}</tbody></table></div>
+  </div>`;
+}
+
+function campaignTypeSection(key){
+  const m = DATA.media[key];
+  if(!m.campaign_type_by_month) return '';
+  let ct, scopeLabel;
+  if(currentLevel==='month'){
+    ct = (m.campaign_type_by_month||{})[currentMonth] || {};
+    scopeLabel = currentMonth;
+  } else {
+    const wk = `${currentMonth}|${currentWeek}`;
+    ct = (m.campaign_type_by_week||{})[wk] || {};
+    scopeLabel = currentWeek;
+  }
+  const entries = Object.entries(ct).sort((a,b)=>b[1].cost-a[1].cost);
+  if(entries.length===0) return `<div class="panel"><h2>${CH_NAMES[key]} · 캠페인 유형별 성과 · ${scopeLabel}</h2><p class="desc">선택한 기간(${scopeLabel})에는 데이터가 없습니다.</p></div>`;
+  const rows = entries.map(([label,v])=>({label, v:v.cost}));
+  const tableRows = entries.map(([label,v])=>`<tr><td>${label}</td><td class="num">${fmt(v.impr)}</td><td class="num">${fmt(v.clicks)}</td><td class="num">${fmt(v.cost)}원</td><td class="num">${fmt(v.purchase)}건</td><td class="num">${fmt(v.revenue)}원</td><td class="num">${v.roas}%</td></tr>`).join('');
+  return `<div class="panel"><h2>${CH_NAMES[key]} · 캠페인 유형별 성과 · ${scopeLabel}</h2>
+    <p class="desc">파워링크 / 쇼핑검색 / 브랜드검색 유형별 비교 — 상단 기간 드롭다운에 반응합니다.</p>
+    ${barChart(rows,"원")}
+    <div class="table-wrap" style="margin-top:14px"><table>
+      <thead><tr><th>캠페인 유형</th><th>노출</th><th>클릭</th><th>비용</th><th>구매</th><th>구매매출</th><th>ROAS</th></tr></thead>
+      <tbody>${tableRows}</tbody>
+    </table></div>
   </div>`;
 }
 
@@ -454,6 +623,41 @@ function top5PageHTML(){
   ${metaExtraSection('메타_외부링크')}`;
 }
 
+function uploadPageHTML(){
+  const uploadUrl = `https://github.com/${GH_OWNER}/${GH_REPO}/upload/${GH_BRANCH}/${UPLOAD_DIR}`;
+  const fileRows = UPLOADED_FILES.map(f=>`<tr>
+      <td>${f.name}</td>
+      <td class="num">${(f.size/1024).toFixed(1)} KB</td>
+      <td class="num"><a href="${f.html_url}" target="_blank" rel="noopener">보기/삭제</a></td>
+    </tr>`).join('');
+  const errBlock = UPLOAD_ERRORS.length ? `<div class="note">⚠️ ${UPLOAD_ERRORS.join(' · ')}</div>` : '';
+  return `
+  <div class="panel">
+    <h2>보고서 업로드</h2>
+    <p class="desc">raw 데이터 CSV를 깃허브 <code>${UPLOAD_DIR}/</code> 폴더에 올리면, 페이지를 열 때마다 자동으로 전부 합쳐서(누적) 대시보드에 반영돼요. data.json은 그대로 두고, 새 CSV만 계속 추가하시면 됩니다.</p>
+    <a href="${uploadUrl}" target="_blank" rel="noopener" style="display:inline-block; background:var(--accent); color:#fff; padding:10px 18px; border-radius:8px; font-weight:700; font-size:13px; text-decoration:none;">+ 새 raw 데이터 CSV 업로드하기 (깃허브로 이동)</a>
+    <div class="note">📌 이 버튼을 누르면 깃허브 업로드 화면으로 바로 이동해요. 파일 올리고 <b>Commit changes</b>까지 누르셔야 반영됩니다.</div>
+  </div>
+
+  <div class="panel">
+    <h2>CSV 형식</h2>
+    <p class="desc">첫 줄은 아래 헤더 그대로, 그 아래에 데이터를 한 줄씩 추가하세요. 매체명은 반드시 다음 중 하나와 똑같이 써주세요: 네이버SA / 구글 / 네이버GFA / 애드부스트 / 메타_협력광고 / 메타_외부링크</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>날짜</th><th>매체</th><th>캠페인</th><th>노출</th><th>도달</th><th>클릭</th><th>비용</th><th>구매</th><th>구매매출</th><th>장바구니담기</th><th>장바구니매출</th></tr></thead>
+      <tbody><tr><td>2026-09-10</td><td>네이버SA</td><td>캠페인명</td><td>10000</td><td>0</td><td>200</td><td>150000</td><td>5</td><td>250000</td><td>2</td><td>40000</td></tr></tbody>
+    </table></div>
+    <p class="desc" style="margin-top:10px">날짜는 <b>YYYY-MM-DD</b> 형식이어야 해요. 월/주차(변환)는 구글시트에 걸어두신 것과 동일한 로직(월 경계마다 리셋, 금요일 시작)으로 이 페이지가 자동 계산합니다.</p>
+  </div>
+
+  <div class="panel">
+    <h2>현재 누적된 업로드 파일 (${UPLOADED_FILES.length}개)</h2>
+    <p class="desc">${UPLOADED_FILES.length ? `총 ${fmt(UPLOAD_ROWS_ADDED)}행이 대시보드 집계에 추가 반영됐어요.` : `아직 업로드된 raw 파일이 없어요. 기본 데이터(data.json)만 표시 중입니다.`}</p>
+    ${UPLOADED_FILES.length ? `<div class="table-wrap"><table><thead><tr><th>파일명</th><th>크기</th><th>관리</th></tr></thead><tbody>${fileRows}</tbody></table></div>` : ''}
+    ${errBlock}
+    <div class="note">📌 잘못 올린 파일은 위 표의 "보기/삭제" 링크로 들어가서, 깃허브 파일 화면의 "..." 메뉴 → Delete file → Commit changes 하시면 바로 집계에서 빠져요.</div>
+  </div>`;
+}
+
 const TABS = [
   {key:"overview", label:"표지 · 요약", group:"메인"},
   {key:"메타_협력광고", label:"META 협력광고", group:"매체별 리포트"},
@@ -463,6 +667,7 @@ const TABS = [
   {key:"네이버GFA", label:"네이버 GFA", group:"매체별 리포트"},
   {key:"애드부스트", label:"애드부스트", group:"매체별 리포트"},
   {key:"top5", label:"소재 성과 TOP5", group:"소재 분석"},
+  {key:"upload", label:"보고서 업로드", group:"관리"},
 ];
 
 function render(){
@@ -476,10 +681,11 @@ function render(){
 function renderApp(){
   const app = document.getElementById('app');
   let content = `<section class="tab active" id="tab-overview">${overviewHTML()}</section>`;
-  TABS.filter(t=>t.key!=="overview" && t.key!=="top5").forEach(t=>{
+  TABS.filter(t=>t.key!=="overview" && t.key!=="top5" && t.key!=="upload").forEach(t=>{
     content += `<section class="tab" id="tab-${t.key}">${channelTableHTML(t.key)}</section>`;
   });
   content += `<section class="tab" id="tab-top5">${top5PageHTML()}</section>`;
+  content += `<section class="tab" id="tab-upload">${uploadPageHTML()}</section>`;
   content += `<footer>DAYS ON 통합 광고 성과 대시보드 · 데이터 출처: 광고주 제공 원본 raw 시트(메타/네이버/구글/애드부스트) 집계 및 Meta Ads MCP 실시간 조회 · 이 페이지는 정적 데이터(data.json) 기준이며, 최신화하려면 raw 데이터를 갱신한 뒤 data.json을 다시 생성해 커밋하세요.</footer>`;
   app.innerHTML = content;
   showTab(activeTab);
